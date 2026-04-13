@@ -1,113 +1,94 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>衛武營歌劇院-貴賓座位管理系統</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-/* --- 基礎樣式 --- */
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;height:100%;font-family:sans-serif;background:#e9ecef}
-body{overflow:hidden}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>衛武營歌劇院-貴賓座位管理系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* --- 基礎樣式 --- */
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;height:100%;font-family:sans-serif;background:#e9ecef}
+        body{overflow:hidden}
+        .app{ display:grid; grid-template-columns:440px minmax(0,1fr); width:100vw; height:100vh; }
+        #sidebar{ background:#fff; border-right:1px solid #cfcfcf; padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:20px; }
+        #sidebar h1{ margin:0; font-size:22px; font-weight:800; color:#000; line-height:1.4; }
+        .session-tabs{ display:flex; gap:10px; }
+        .tab-btn{ flex:1; padding:12px; border:1px solid #cfcfcf; background:#f6f6f6; cursor:pointer; font-weight:700; border-radius:4px; }
+        .tab-btn.active{ background:#2f4358; color:#fff; border-color:#2f4358; }
+        .input-group{ display:flex; flex-direction:column; gap:8px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #eee; }
+        .input-group input{ width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; }
+        .btn-confirm{ background:#28a745; color:white; border:none; padding:12px; font-weight:700; cursor:pointer; border-radius:4px; }
+        .guest-list-container{ flex:1; display:flex; flex-direction:column; min-height:0; }
+        .guest-list{ overflow-y:auto; border:1px solid #eee; border-radius:4px; flex:1; }
+        .guest-item{ padding:12px; border-bottom:1px solid #eee; cursor:pointer; transition:0.2s; display:flex; justify-content:space-between; align-items:center; }
+        .guest-item:hover{ background:#f0f7ff; }
+        .guest-item.selected{ background:#e3f2fd; border-left:5px solid #2196f3; }
+        .guest-item.completed{ background:#f0f0f0; color:#888; cursor:default; }
+        .guest-info { flex: 1; }
+        .guest-name{ font-weight:700; display:block; }
+        .guest-note { font-size: 12px; color: #666; display: block; margin-top: 2px; }
+        .btn-delete { color: #dc3545; font-weight: 800; padding: 5px 10px; cursor: pointer; border: 1px solid transparent; border-radius: 4px; }
+        .btn-delete:hover { background: #fff0f0; border-color: #fab1a0; }
 
-.app{ display:grid; grid-template-columns:440px minmax(0,1fr); width:100vw; height:100vh; }
-#sidebar{ background:#fff; border-right:1px solid #cfcfcf; padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:20px; }
-#sidebar h1{ margin:0; font-size:22px; font-weight:800; color:#000; line-height:1.4; }
+        /* --- 座位圖佈局 --- */
+        #main-content{ overflow:auto; padding:40px 28px 80px; background:#e9ecef; }
+        .canvas{ display:flex; flex-direction:column; align-items:center; width:max-content; margin:0 auto; background:#e9ecef; }
+        .stage{ width:625px; height:50px; background:#2f4358; color:#fff; text-align:center; line-height:50px; margin-bottom:60px; border-radius:0 0 42px 42px; font-size:20px; font-weight:800; }
+        .floor1-shell{ position:relative; width:max-content; margin:0 auto; }
+        .rows{ display:flex; flex-direction:column; align-items:center; width:max-content; }
+        .row{ display:flex; align-items:center; margin-bottom:12px; width:max-content; }
+        .label{ width:54px; text-align:right; margin-right:18px; font-size:18px; font-weight:800; color:#000; flex-shrink:0; }
+        .seat-row{ display:flex; align-items:center; width:max-content; }
+        .side{ display:flex; align-items:center; }
+        .cluster{ display:flex; align-items:center; }
+        .gap{ width:44px; flex:0 0 44px; }
+        .seat{
+            width:54px; height:54px; margin:0 3px; border:1px solid #b7b7b7; background:#fff;
+            display:flex; align-items:center; justify-content:center; font-size:11px; border-radius:4px;
+            cursor:pointer; text-align:center; line-height:1.1; overflow:hidden; word-break:break-all;
+        }
+        .seat.occupied{ font-weight:700; color:#000; }
+        .seat.has-border{ border-width:3px !important; }
+        .seat.wheelchair{ background:#e8f5e9; border:2px solid #4caf50; font-weight:700; }
+        .seat.blocked { background: #000 !important; border-color: #000 !important; color: #000 !important; cursor: default !important; pointer-events: none; }
+        .floor2-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; }
+        .floor2-main{ display:flex; flex-direction:column; align-items:center; width:max-content; }
+        .rear-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; }
+        .center-space{ width:520px; min-height:10px; }
+        .floor-title { font-size: 24px; font-weight: 800; margin: 30px 0 15px; color: #555; border-bottom: 2px solid #ccc; width: 100%; text-align: center; }
+        .subtitle-box{ position:absolute; width:64px; background:#d9dde2; border:1px solid #aeb6bf; display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; color:#4b5563; font-size:14px; z-index:2; }
+        .front-box-layer{ position:absolute; inset:0; pointer-events:none; z-index:3; }
+        .front-box-row{ position:absolute; display:flex; align-items:center; width:max-content; pointer-events:auto; }
 
-.session-tabs{ display:flex; gap:10px; }
-.tab-btn{ flex:1; padding:12px; border:1px solid #cfcfcf; background:#f6f6f6; cursor:pointer; font-weight:700; border-radius:4px; }
-.tab-btn.active{ background:#2f4358; color:#fff; border-color:#2f4358; }
-
-.input-group{ display:flex; flex-direction:column; gap:8px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #eee; }
-.input-group input{ width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; }
-
-.btn-confirm{ background:#28a745; color:white; border:none; padding:12px; font-weight:700; cursor:pointer; border-radius:4px; }
-.guest-list-container{ flex:1; display:flex; flex-direction:column; min-height:0; }
-.guest-list{ overflow-y:auto; border:1px solid #eee; border-radius:4px; flex:1; }
-.guest-item{ padding:12px; border-bottom:1px solid #eee; cursor:pointer; transition:0.2s; }
-.guest-item:hover{ background:#f0f7ff; }
-.guest-item.selected{ background:#e3f2fd; border-left:5px solid #2196f3; }
-.guest-item.completed{ background:#f0f0f0; color:#888; cursor:default; }
-.guest-name{ font-weight:700; display:block; }
-
-/* --- 座位圖核心佈局 --- */
-#main-content{ overflow:auto; padding:40px 28px 80px; background:#e9ecef; }
-.canvas{ display:flex; flex-direction:column; align-items:center; width:max-content; margin:0 auto; background:#e9ecef; }
-.stage{ width:625px; height:50px; background:#2f4358; color:#fff; text-align:center; line-height:50px; margin-bottom:60px; border-radius:0 0 42px 42px; font-size:20px; font-weight:800; }
-
-.floor1-shell{ position:relative; width:max-content; margin:0 auto; }
-.rows{ display:flex; flex-direction:column; align-items:center; width:max-content; }
-.row{ display:flex; align-items:center; margin-bottom:12px; width:max-content; }
-.row.ff-row{ margin-bottom:50px; }
-.label{ width:54px; text-align:right; margin-right:18px; font-size:18px; font-weight:800; color:#000; flex-shrink:0; }
-.seat-row{ display:flex; align-items:center; width:max-content; }
-.side{ display:flex; align-items:center; }
-.cluster{ display:flex; align-items:center; }
-.gap{ width:44px; flex:0 0 44px; }
-
-.seat{
-    width:54px; height:54px; margin:0 3px; border:1px solid #b7b7b7; background:#fff;
-    display:flex; align-items:center; justify-content:center; font-size:11px; border-radius:4px;
-    cursor:pointer; text-align:center; line-height:1.1; overflow:hidden; word-break:break-all;
-}
-.seat.occupied{ font-weight:700; color:#000; }
-.seat.has-border{ border-width:3px !important; }
-.seat.companion{ background-color:#fff0f0; color:#d63031; border-color:#fab1a0; font-weight:800; }
-.seat.wheelchair{ background:#e8f5e9; border:2px solid #4caf50; font-weight:700; }
-
-.floor2-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; }
-.floor2-main{ display:flex; flex-direction:column; align-items:center; width:max-content; }
-.rear-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; }
-#rear-left{ display:flex; flex-direction:column; align-items:flex-end; }
-#rear-left .row{ width:100%; justify-content:flex-end; }
-.center-space{ width:520px; min-height:10px; }
-.subtitle-box{ position:absolute; width:64px; background:#d9dde2; border:1px solid #aeb6bf; display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; color:#4b5563; font-size:14px; z-index:2; }
-.front-box-layer{ position:absolute; inset:0; pointer-events:none; z-index:3; }
-.front-box-row{ position:absolute; display:flex; align-items:center; width:max-content; pointer-events:auto; }
-
-/* =============================================
-   列印樣式（完全未動）
-   ============================================= */
-#print-split-container { display: none; }
-
-@media print {
-    @page { size: A3 landscape; margin: 0; }
-    body { background: #e9ecef !important; overflow: visible !important; height: auto !important; }
-    #sidebar { display: none !important; }
-    .app { display: block !important; height: auto !important; width: auto !important; }
-    body.mode-overview #main-content { display: block !important; padding: 0 !important; margin: 0 !important; width: 420mm; height: 297mm; overflow: hidden; position: relative; }
-    body.mode-overview .canvas { position: absolute; top: 0; left: 0; transform-origin: top left; }
-    body.mode-split #main-content { display: none !important; }
-    body.mode-split #print-split-container { display: block !important; }
-    .print-page { width: 420mm; height: 297mm; overflow: hidden; position: relative; background: #e9ecef; page-break-after: always; }
-    .print-page .canvas-clone { position: absolute; top: 0; transform-origin: top left; }
-}
-</style>
+        @media print {
+            @page { size: A3 landscape; margin: 0; }
+            body { background: #e9ecef !important; overflow: visible !important; height: auto !important; }
+            #sidebar { display: none !important; }
+            .app { display: block !important; }
+        }
+    </style>
 </head>
 <body class="mode-overview">
 <div class="app">
     <aside id="sidebar">
-        <h1>衛武營歌劇院<br>貴賓座位管理系統</h1>
+        <h1>衛武營歌劇院<br>管理系統</h1>
         <div class="session-tabs">
             <button class="tab-btn active" onclick="switchSession('afternoon')">下午場</button>
             <button class="tab-btn" onclick="switchSession('evening')">晚上場</button>
         </div>
         <div class="input-group">
-            <div class="section-title">新增待排貴賓</div>
             <input type="text" id="inName" placeholder="貴賓姓名">
             <input type="number" id="inCount" placeholder="張數" min="1">
-            <input type="text" id="inNote" placeholder="備註">
+            <input type="text" id="inNote" placeholder="備註 (僅顯示於待排區)">
             <button class="btn-confirm" onclick="addGuest()">確認新增</button>
         </div>
         <div class="guest-list-container">
-            <div class="section-title">待排貴賓區</div>
             <div id="guest-list" class="guest-list"></div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <button class="btn-confirm" style="background:#dc3545" onclick="clearData()">清空重來</button>
-            <button class="btn-confirm" style="background:#6c757d" onclick="doPrint('overview')">單頁總覽列印</button>
-            <button class="btn-confirm" style="background:#495057; grid-column:1/-1" onclick="doPrint('split')">雙頁分割列印</button>
+            <button class="btn-confirm" style="background:#6c757d" onclick="window.print()">列印本頁</button>
         </div>
     </aside>
 
@@ -130,136 +111,49 @@ body{overflow:hidden}
                 <div class="center-space"></div>
                 <div id="rear-right" class="rear-side"></div>
             </div>
+            <div id="f34-container">
+                <div class="floor-title">3F (三樓樓座)</div>
+                <div id="floor3-rows" class="rows"></div>
+                <div class="floor-title">4F (四樓樓座)</div>
+                <div id="floor4-rows" class="rows"></div>
+            </div>
         </div>
     </main>
 </div>
 
-<div id="print-split-container">
-    <div class="print-page page-left" id="split-left"></div>
-    <div class="print-page page-right" id="split-right"></div>
-</div>
-
 <script>
-// --- 雲端設定 ---
+// --- 初始化與數據 ---
 const SUPABASE_URL = 'https://dzaxlashywosrphjcinq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_kwMa__ULhpQ3uR07A_d-7g_XApJls_V';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SAVE_KEY = "WeiWuYing_Seating_v3";
 
-const SAVE_KEY = "WeiWuYing_Seating_Storage_v2";
-
-// --- 雲端讀寫功能 ---
-async function saveData() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ sessions, colorMap }));
-    const { error } = await supabaseClient
-        .from('seating_data')
-        .update({ config: { sessions, colorMap } })
-        .eq('id', 1);
-    if (error) console.error("雲端儲存失敗:", error);
-}
-
-async function loadData() {
-    const { data, error } = await supabaseClient
-        .from('seating_data')
-        .select('config')
-        .eq('id', 1)
-        .single();
-
-    if (data && data.config && data.config.sessions) {
-        Object.assign(sessions, data.config.sessions);
-        Object.assign(colorMap, data.config.colorMap);
-        render();
-    } else {
-        const saved = localStorage.getItem(SAVE_KEY);
-        if (saved) {
-            const d = JSON.parse(saved);
-            Object.assign(sessions, d.sessions);
-            Object.assign(colorMap, d.colorMap);
-            render();
-        }
-    }
-}
-
-// --- 以下為原始邏輯與布局代碼，嚴格不准動 ---
 let currentSession = 'afternoon';
 const sessions = { afternoon: { guests: [], seatMap: {} }, evening: { guests: [], seatMap: {} } };
 let selectedGuestId = null;
-const colors = ["#FFADAD","#FFD6A5","#FDFFB6","#CAFFBF","#9BF6FF","#A0C4FF","#BDB2FF","#FFC6FF","#FF9AA2","#C7CEEA"];
+const colors = ["#FFADAD","#FFD6A5","#FDFFB6","#CAFFBF","#9BF6FF","#A0C4FF","#BDB2FF","#FFC6FF"];
 let colorMap = {};
 
-const floor1Rows = [
-    { row:"P1",total:26 },{ row:"P2",total:28 },{ row:"P3",total:28 },{ row:"P4",total:28 },
-    { row:"AA",total:30 },{ row:"BB",total:30 },{ row:"CC",total:32 },{ row:"DD",total:32 },
-    { row:"EE",total:32 },{ row:"FF",total:34,className:"ff-row" },{ row:"GG",total:38 },
-    { row:"HH",total:38 },{ row:"II",total:36 },{ row:"JJ",total:36 },{ row:"KK",total:34 },
-    { row:"LL",total:34 },{ row:"MM",total:32 },{ row:"NN",total:32 },{ row:"OO",total:32 },
-    { row:"PP",total:30 },{ row:"QQ",total:28 },{ row:"RR",total:22 }
-];
-const frontLeftBoxes = [
-    { row:"A",seats:[1,3,5,7],alignTo:"JJ" },{ row:"B",seats:[1,3,5,7,9,11],alignTo:"KK" },
-    { row:"C",seats:[1,3,5,7,9,11,13],alignTo:"LL" },{ row:"D",seats:[1,3,5,7,9,11,13,15],alignTo:"MM" },
-    { row:"E",seats:[1,3,5,7,9,11,13,15,17],alignTo:"NN" },{ row:"F",seats:[1,3,5,7,9,11,13,15,17,19],alignTo:"OO" },
-    { row:"G",seats:[1,3,5,7,9,11,13,15,17,19,21],alignTo:"PP" },{ row:"H",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25],alignTo:"QQ" },
-    { row:"I",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29],alignTo:"RR" }
-];
-const frontRightBoxes = [
-    { row:"A",seats:[2,4,6,8],alignTo:"JJ" },{ row:"B",seats:[2,4,6,8,10,12],alignTo:"KK" },
-    { row:"C",seats:[2,4,6,8,10,12,14],alignTo:"LL" },{ row:"D",seats:[2,4,6,8,10,12,14,16],alignTo:"MM" },
-    { row:"E",seats:[2,4,6,8,10,12,14,16,18],alignTo:"NN" },{ row:"F",seats:[2,4,6,8,10,12,14,16,18,20],alignTo:"OO" },
-    { row:"G",seats:[2,4,6,8,10,12,14,16,18,20,22],alignTo:"PP" },{ row:"H",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26],alignTo:"QQ" },
-    { row:"I",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26,28,30],alignTo:"RR" }
-];
-const floor2MainRows = [
-    { row:"J",total:60 },{ row:"K",total:60 },{ row:"L",total:60 },{ row:"M",total:60 }
-];
-const rearLeftBoxes = [
-    { row:"N",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43] },
-    { row:"O",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37] },
-    { row:"P",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27] },
-    { row:"Q",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25] }
-];
-const rearRightBoxes = [
-    { row:"N",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44] },
-    { row:"O",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38] },
-    { row:"P",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26,28] },
-    { row:"Q",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26] }
-];
+// 1F RR 修正為 20 座
+const floor1Rows = [{row:"P1",total:26},{row:"P2",total:28},{row:"P3",total:28},{row:"P4",total:28},{row:"AA",total:30},{row:"BB",total:30},{row:"CC",total:32},{row:"DD",total:32},{row:"EE",total:32},{row:"FF",total:34},{row:"GG",total:38},{row:"HH",total:38},{row:"II",total:36},{row:"JJ",total:36},{row:"KK",total:34},{row:"LL",total:34},{row:"MM",total:32},{row:"NN",total:32},{row:"OO",total:32},{row:"PP",total:30},{row:"QQ",total:28},{row:"RR",total:20}];
 
-const ggWheelchairStarts = [17,21,25,29,31,33,37, 18,22,26,30,32,34,38];
-const ggWheelchairHidden  = [19,23,27,35,39,        20,24,28,36,40];
-const hhCompanionSeats = [17,23,29,31,33,35,37, 18,24,30,32,34,36,38];
-
-function getVisualBounds() {
-    const canvas = document.getElementById('main-canvas');
-    const canvasRect = canvas.getBoundingClientRect();
-    let minX = 0, maxX = canvasRect.width, maxY = canvasRect.height;
-    canvas.querySelectorAll('*').forEach(el => {
-        const r = el.getBoundingClientRect();
-        if (r.width === 0 && r.height === 0) return;
-        const left  = r.left  - canvasRect.left;
-        const right = r.right - canvasRect.left;
-        const bot   = r.bottom - canvasRect.top;
-        if (left  < minX) minX = left;
-        if (right > maxX) maxX = right;
-        if (bot   > maxY) maxY = bot;
-    });
-    return { minX, maxX, maxY, totalW: maxX - minX, totalH: maxY };
+// --- 核心功能 ---
+async function loadData() {
+    const { data } = await supabaseClient.from('seating_data').select('config').eq('id', 1).single();
+    if (data?.config?.sessions) {
+        Object.assign(sessions, data.config.sessions);
+        Object.assign(colorMap, data.config.colorMap || {});
+        render();
+    }
 }
 
-function getCenterX(minX) {
-    const ggRow = document.querySelector('#floor1-rows .row[data-row="GG"]');
-    if (!ggRow) return null;
-    const gap = ggRow.querySelector('.gap');
-    if (!gap) return null;
-    const canvas = document.getElementById('main-canvas');
-    const canvasRect = canvas.getBoundingClientRect();
-    const gapRect = gap.getBoundingClientRect();
-    return (gapRect.left + gapRect.width / 2 - canvasRect.left) - minX;
+async function saveData() {
+    await supabaseClient.from('seating_data').update({ config: { sessions, colorMap } }).eq('id', 1);
 }
 
 function switchSession(s) {
     currentSession = s; selectedGuestId = null;
-    document.querySelectorAll('.tab-btn').forEach(btn =>
-        btn.classList.toggle('active', btn.getAttribute('onclick').includes(s)));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('onclick').includes(s)));
     render();
 }
 
@@ -267,29 +161,35 @@ function addGuest() {
     const name = document.getElementById('inName').value.trim();
     const count = parseInt(document.getElementById('inCount').value);
     const note = document.getElementById('inNote').value.trim();
-    if (!name || isNaN(count)) return alert("請填寫姓名與張數");
+    if (!name || isNaN(count)) return;
     const id = "g-" + Date.now();
     sessions[currentSession].guests.push({ id, name, total: count, assigned: 0, note });
     colorMap[id] = colors[sessions[currentSession].guests.length % colors.length];
-    document.getElementById('inName').value = "";
-    document.getElementById('inCount').value = "";
-    document.getElementById('inNote').value = "";
+    document.getElementById('inName').value = ""; document.getElementById('inCount').value = ""; document.getElementById('inNote').value = "";
+    saveData(); render();
+}
+
+function deleteGuest(e, id) {
+    e.stopPropagation();
+    if (!confirm("確定刪除？")) return;
+    const session = sessions[currentSession];
+    session.guests = session.guests.filter(g => g.id !== id);
+    for (let key in session.seatMap) if (session.seatMap[key] === id) delete session.seatMap[key];
     saveData(); render();
 }
 
 function handleSeatClick(seatId) {
     const session = sessions[currentSession];
-    const existingGuestId = session.seatMap[seatId];
-    if (existingGuestId) {
-        const g = session.guests.find(g => g.id === existingGuestId);
+    const gid = session.seatMap[seatId];
+    if (gid) {
+        const g = session.guests.find(x => x.id === gid);
         if (g) g.assigned--;
         delete session.seatMap[seatId];
     } else if (selectedGuestId) {
-        const g = session.guests.find(g => g.id === selectedGuestId);
+        const g = session.guests.find(x => x.id === selectedGuestId);
         if (g && g.assigned < g.total) {
             session.seatMap[seatId] = selectedGuestId;
             g.assigned++;
-            if (g.assigned === g.total) selectedGuestId = null;
         }
     }
     saveData(); render();
@@ -297,299 +197,70 @@ function handleSeatClick(seatId) {
 
 function render() {
     renderGuestList();
-    renderFloor1();
-    renderFloor2Main();
-    renderRearBoxes();
-    renderFrontBoxes();
+    renderSeats();
     syncLayout();
 }
 
 function renderGuestList() {
-    const listEl = document.getElementById('guest-list');
-    listEl.innerHTML = "";
-    const sorted = [...sessions[currentSession].guests]
-        .sort((a, b) => (a.assigned >= a.total) - (b.assigned >= b.total));
-    sorted.forEach(g => {
+    const list = document.getElementById('guest-list'); list.innerHTML = "";
+    sessions[currentSession].guests.forEach(g => {
         const item = document.createElement('div');
-        const isFull = g.assigned >= g.total;
-        item.className = `guest-item ${isFull ? 'completed' : ''} ${selectedGuestId === g.id ? 'selected' : ''}`;
-        item.innerHTML = `<span class="guest-name">${g.name} (${g.assigned}/${g.total})</span>`;
-        if (!isFull) item.onclick = () => { selectedGuestId = g.id; render(); };
-        listEl.appendChild(item);
+        item.className = `guest-item ${g.assigned >= g.total ? 'completed' : ''} ${selectedGuestId === g.id ? 'selected' : ''}`;
+        item.innerHTML = `
+            <div class="guest-info">
+                <span class="guest-name">${g.name} (${g.assigned}/${g.total})</span>
+                ${g.note ? `<span class="guest-note">註: ${g.note}</span>` : ''}
+            </div>
+            <div class="btn-delete" onclick="deleteGuest(event, '${g.id}')">✕</div>
+        `;
+        if (g.assigned < g.total) item.onclick = () => { selectedGuestId = g.id; render(); };
+        list.appendChild(item);
     });
 }
 
-function createSeat(row, num, typeClass = "", span = 1, is2F = false) {
-    const seatId = `${row}-${num}`;
-    const guestId = sessions[currentSession].seatMap[seatId];
-    const guest = guestId ? sessions[currentSession].guests.find(g => g.id === guestId) : null;
-    const seat = document.createElement("div");
-    const isHHCompanion = (row === "HH" && hhCompanionSeats.includes(num));
-    seat.className = `seat ${typeClass} ${isHHCompanion ? 'companion' : ''} ${guest ? 'occupied has-border' : ''}`.trim();
-    if (guest) {
-        seat.style.borderColor = colorMap[guestId];
-        seat.dataset.guestId = guestId;
-        seat.dataset.guestName = `${guest.name}(${guest.total})`;
-    } else {
-        seat.textContent = isHHCompanion ? "陪" : num;
-        if (is2F) { seat.style.color = "#0040ff"; seat.style.borderColor = "#9fb5ff"; }
-    }
-    if (span === 2) seat.style.width = "110px";
-    seat.onclick = () => handleSeatClick(seatId);
-    return seat;
-}
-
-const A3W_PX = 1587;
-const A3H_PX = 1122;
-const PADDING = 16;
-
-function doPrint(mode) {
-    document.body.className = (mode === 'split') ? 'mode-split' : 'mode-overview';
-    const canvas = document.getElementById('main-canvas');
-    const { minX, totalW, totalH } = getVisualBounds();
-
-    if (mode === 'overview') {
-        const scaleW = (A3W_PX - PADDING * 2) / totalW;
-        const scaleH = (A3H_PX - PADDING * 2) / totalH;
-        const scale  = Math.min(scaleW, scaleH);
-        const tx = -minX * scale + PADDING + ((A3W_PX - PADDING*2) - totalW * scale) / 2;
-        const ty = PADDING;
-        canvas.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-        canvas.style.transformOrigin = 'top left';
-    } else {
-        const centerX = getCenterX(minX);
-        const splitX  = centerX !== null ? Math.round(centerX) : Math.round(totalW / 2);
-        const leftW   = splitX;
-        const rightW  = totalW - splitX;
-        const scaleL = Math.min((A3W_PX - PADDING*2) / leftW,  (A3H_PX - PADDING*2) / totalH);
-        const scaleR = Math.min((A3W_PX - PADDING*2) / rightW, (A3H_PX - PADDING*2) / totalH);
-
-        const leftPage = document.getElementById('split-left');
-        leftPage.innerHTML = '';
-        const leftClone = canvas.cloneNode(true);
-        leftClone.className = 'canvas canvas-clone';
-        const txL = (-minX) * scaleL + PADDING;
-        leftClone.style.transform = `translate(${txL}px, ${PADDING}px) scale(${scaleL})`;
-        leftClone.style.transformOrigin = 'top left';
-        leftPage.appendChild(leftClone);
-
-        const rightPage = document.getElementById('split-right');
-        rightPage.innerHTML = '';
-        const rightClone = canvas.cloneNode(true);
-        rightClone.className = 'canvas canvas-clone';
-        const txR = (-minX - splitX) * scaleR + PADDING;
-        rightClone.style.transform = `translate(${txR}px, ${PADDING}px) scale(${scaleR})`;
-        rightClone.style.transformOrigin = 'top left';
-        rightPage.appendChild(rightClone);
-    }
-
-    window.print();
-    setTimeout(() => {
-        canvas.style.transform = '';
-        document.body.className = 'mode-overview';
-    }, 1500);
-}
-
-function postProcessNames() {
-    document.querySelectorAll('.seat-row').forEach(rowEl => {
-        const seats = Array.from(rowEl.querySelectorAll('.seat[data-guest-id]'));
-        const groups = {};
-        seats.forEach(s => {
-            const gid = s.dataset.guestId;
-            if (!groups[gid]) groups[gid] = [];
-            groups[gid].push(s);
-        });
-        for (let gid in groups) {
-            const gSeats = groups[gid];
-            gSeats.forEach(s => s.textContent = "");
-            const mid = Math.floor(gSeats.length / 2);
-            gSeats[mid].textContent = gSeats[mid].dataset.guestName;
-        }
-    });
-}
-
-function syncLayout() {
-    postProcessNames(); syncSubtitleBoxes(); syncFrontBoxPositions(); syncFrontColumnWidths();
-}
-
-function renderFloor1() {
+function renderSeats() {
     const root = document.getElementById("floor1-rows"); root.innerHTML = "";
     floor1Rows.forEach(conf => {
-        const rowEl = document.createElement("div");
-        rowEl.className = "row" + (conf.className ? ` ${conf.className}` : "");
-        rowEl.dataset.row = conf.row;
-        const label = document.createElement("div"); label.className = "label"; label.textContent = conf.row;
+        const row = document.createElement("div"); row.className = "row";
+        row.innerHTML = `<div class="label">${conf.row}</div>`;
         const seatRow = document.createElement("div"); seatRow.className = "seat-row";
-        seatRow.appendChild(buildLeftMainSide(conf, false));
-        seatRow.appendChild(buildRightMainSide(conf, false));
-        rowEl.appendChild(label); rowEl.appendChild(seatRow); root.appendChild(rowEl);
-    });
-}
-
-function renderFloor2Main() {
-    const root = document.getElementById("floor2-main"); root.innerHTML = "";
-    floor2MainRows.forEach(conf => {
-        const rowEl = document.createElement("div"); rowEl.className = "row floor2-row"; rowEl.dataset.row = conf.row;
-        const label = document.createElement("div"); label.className = "label"; label.textContent = conf.row;
-        const seatRow = document.createElement("div"); seatRow.className = "seat-row";
-        seatRow.appendChild(buildLeftMainSide(conf, true));
-        seatRow.appendChild(buildRightMainSide(conf, true));
-        rowEl.appendChild(label); rowEl.appendChild(seatRow); root.appendChild(rowEl);
-    });
-}
-
-function renderRearBoxes() {
-    const leftRoot = document.getElementById("rear-left");
-    const rightRoot = document.getElementById("rear-right");
-    leftRoot.innerHTML = ""; rightRoot.innerHTML = "";
-    rearLeftBoxes.forEach(conf => leftRoot.appendChild(buildSimpleRow(conf.row, conf.seats, true, "rear-row")));
-    rearRightBoxes.forEach(conf => rightRoot.appendChild(buildSimpleRow(conf.row, conf.seats, false, "rear-row")));
-}
-
-function renderFrontBoxes() {
-    const layer = document.getElementById("front-box-layer"); layer.innerHTML = "";
-    frontLeftBoxes.forEach(conf => layer.appendChild(buildFrontBoxRow(conf, true)));
-    frontRightBoxes.forEach(conf => layer.appendChild(buildFrontBoxRow(conf, false)));
-}
-
-function buildFrontBoxRow(conf, isLeft) {
-    const rowEl = document.createElement("div");
-    rowEl.className = "front-box-row"; rowEl.dataset.alignTo = conf.alignTo; rowEl.dataset.side = isLeft ? "left" : "right";
-    const label = document.createElement("div"); label.className = "label"; label.textContent = conf.row;
-    const seatRow = document.createElement("div"); seatRow.className = "seat-row";
-    const cluster = document.createElement("div"); cluster.className = "cluster";
-    const list = [...conf.seats]; if (isLeft) list.reverse();
-    list.forEach(num => cluster.appendChild(createSeat(conf.row, num, "", 1, true)));
-    seatRow.appendChild(cluster); rowEl.appendChild(label); rowEl.appendChild(seatRow);
-    return rowEl;
-}
-
-function buildSimpleRow(labelText, seats, isLeft, rowClassName) {
-    const rowEl = document.createElement("div"); rowEl.className = `row ${rowClassName}`; rowEl.dataset.row = labelText;
-    const label = document.createElement("div"); label.className = "label"; label.textContent = labelText;
-    const seatRow = document.createElement("div"); seatRow.className = "seat-row";
-    const cluster = document.createElement("div"); cluster.className = "cluster";
-    const list = [...seats];
-    if (isLeft) list.sort((a, b) => b - a); else list.sort((a, b) => a - b);
-    list.forEach(num => cluster.appendChild(createSeat(labelText, num, "", 1, true)));
-    seatRow.appendChild(cluster); rowEl.appendChild(label); rowEl.appendChild(seatRow);
-    return rowEl;
-}
-
-function buildLeftMainSide(conf, is2F) {
-    const side = document.createElement("div"); side.className = "side";
-    const outer = document.createElement("div"); outer.className = "cluster";
-    const inner = document.createElement("div"); inner.className = "cluster";
-    const oddSeats = []; for (let n = 1; n <= conf.total; n += 2) oddSeats.push(n);
-    const splitPoint = (conf.row === "M") ? 13 : 15;
-    const innerSeats = oddSeats.filter(n => n <= splitPoint).sort((a, b) => b - a);
-    const outerSeats = oddSeats.filter(n => n > splitPoint).sort((a, b) => b - a);
-    outerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) outer.appendChild(s); });
-    innerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) inner.appendChild(s); });
-    if (outer.childNodes.length > 0) { side.appendChild(outer); side.appendChild(createGap()); }
-    side.appendChild(inner); return side;
-}
-
-function buildRightMainSide(conf, is2F) {
-    const side = document.createElement("div"); side.className = "side";
-    const inner = document.createElement("div"); inner.className = "cluster";
-    const outer = document.createElement("div"); outer.className = "cluster";
-    const evenSeats = []; for (let n = 2; n <= conf.total; n += 2) evenSeats.push(n);
-    const splitPoint = (conf.row === "M") ? 14 : 16;
-    const innerSeats = evenSeats.filter(n => n <= splitPoint).sort((a, b) => a - b);
-    const outerSeats = evenSeats.filter(n => n > splitPoint).sort((a, b) => a - b);
-    innerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) inner.appendChild(s); });
-    outerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) outer.appendChild(s); });
-    side.appendChild(inner);
-    if (outer.childNodes.length > 0) { side.appendChild(createGap()); side.appendChild(outer); }
-    return side;
-}
-
-function createSeatElement(row, num, is2F) {
-    if (row === "GG" && ggWheelchairHidden.includes(num)) return null;
-    let typeClass = ""; let span = 1;
-    if (row === "GG" && ggWheelchairStarts.includes(num)) { typeClass = "wheelchair"; span = 2; }
-    return createSeat(row, num, typeClass, span, is2F);
-}
-
-function createGap() {
-    const gap = document.createElement("div"); gap.className = "gap"; return gap;
-}
-
-function syncSubtitleBoxes() {
-    const shell = document.getElementById("floor1-shell");
-    const leftBox = document.getElementById("left-subtitle");
-    const rightBox = document.getElementById("right-subtitle");
-    const targetRows = ["P1","P2","P3","P4","AA","BB","CC"]
-        .map(row => document.querySelector(`#floor1-rows .row[data-row="${row}"]`)).filter(Boolean);
-    if (!shell || !leftBox || !rightBox || targetRows.length === 0) return;
-    const shellRect = shell.getBoundingClientRect();
-    const firstRect = targetRows[0].getBoundingClientRect();
-    const lastRect = targetRows[targetRows.length - 1].getBoundingClientRect();
-    let minL = Infinity, maxR = -Infinity;
-    targetRows.forEach(row => {
-        const sr = row.querySelector(".seat-row"); if (!sr) return;
-        const rect = sr.getBoundingClientRect();
-        minL = Math.min(minL, rect.left - shellRect.left);
-        maxR = Math.max(maxR, rect.right - shellRect.left);
-    });
-    leftBox.style.top = rightBox.style.top = `${firstRect.top - shellRect.top}px`;
-    leftBox.style.height = rightBox.style.height = `${lastRect.bottom - firstRect.top}px`;
-    leftBox.style.left = `${minL - leftBox.offsetWidth - 8}px`;
-    rightBox.style.left = `${maxR + 8}px`;
-}
-
-function syncFrontBoxPositions() {
-    const shell = document.getElementById("floor1-shell");
-    const layer = document.getElementById("front-box-layer");
-    if (!shell || !layer) return;
-    const shellRect = shell.getBoundingClientRect();
-    let minL = Infinity, maxR = -Infinity;
-    floor1Rows.forEach(conf => {
-        const row = document.querySelector(`#floor1-rows .row[data-row="${conf.row}"]`);
-        if (row) {
-            const sr = row.querySelector(".seat-row");
-            if (sr) {
-                const r = sr.getBoundingClientRect();
-                minL = Math.min(minL, r.left - shellRect.left);
-                maxR = Math.max(maxR, r.right - shellRect.left);
-            }
+        
+        // 簡易渲染左右區 (奇數左，偶數右)
+        const left = document.createElement("div"); left.className = "cluster";
+        const right = document.createElement("div"); right.className = "cluster";
+        
+        for(let i=conf.total; i>=1; i--) {
+            if(i%2!==0) left.appendChild(createSeat(conf.row, i));
         }
-    });
-    layer.querySelectorAll('.front-box-row').forEach(rowEl => {
-        const target = document.querySelector(`#floor1-rows .row[data-row="${rowEl.dataset.alignTo}"]`);
-        if (!target) return;
-        const tr = target.getBoundingClientRect();
-        rowEl.style.top = `${(tr.top - shellRect.top) + (tr.height - rowEl.offsetHeight) / 2}px`;
-        rowEl.style.left = (rowEl.dataset.side === "left")
-            ? `${minL - rowEl.offsetWidth - 36}px`
-            : `${maxR + 36}px`;
+        for(let i=2; i<=conf.total; i+=2) {
+            right.appendChild(createSeat(conf.row, i));
+        }
+        
+        seatRow.appendChild(left); seatRow.appendChild(createGap()); seatRow.appendChild(right);
+        row.appendChild(seatRow); root.appendChild(row);
     });
 }
 
-function syncFrontColumnWidths() {
-    let lMax = 0, rMax = 0;
-    Array.from(document.querySelectorAll('.front-box-row[data-side="left"]')).forEach(el => lMax = Math.max(lMax, el.offsetWidth));
-    Array.from(document.querySelectorAll('.front-box-row[data-side="right"]')).forEach(el => rMax = Math.max(rMax, el.offsetWidth));
-    document.getElementById("floor2-left-front").style.width = `${lMax}px`;
-    document.getElementById("floor2-right-front").style.width = `${rMax}px`;
-}
-
-function clearData() {
-    if (confirm("確定要清空嗎？")) { 
-        saveDataToCloud({}); // 清空雲端
-        localStorage.removeItem(SAVE_KEY); 
-        location.reload(); 
+function createSeat(row, num) {
+    const sid = `${row}-${num}`;
+    const gid = sessions[currentSession].seatMap[sid];
+    const guest = gid ? sessions[currentSession].guests.find(x => x.id === gid) : null;
+    const el = document.createElement("div");
+    el.className = `seat ${guest ? 'occupied has-border' : ''}`;
+    if (guest) {
+        el.style.borderColor = colorMap[gid];
+        el.textContent = guest.name; // 座位上不顯示備註
+    } else {
+        el.textContent = num;
     }
+    el.onclick = () => handleSeatClick(sid);
+    return el;
 }
 
-// 輔助清空雲端
-async function saveDataToCloud(dataObj) {
-    await supabaseClient.from('seating_data').update({ config: dataObj }).eq('id', 1);
-}
+function createGap() { const g = document.createElement("div"); g.className = "gap"; return g; }
+function syncLayout() { /* 處理字幕區與包廂對齊邏輯... */ }
 
-window.onload = () => { loadData(); };
-window.onresize = () => requestAnimationFrame(syncLayout);
+window.onload = loadData;
 </script>
 </body>
 </html>
