@@ -516,7 +516,19 @@ function doPrint(mode) {
     window.print();
     setTimeout(() => { canvas.style.transform = ''; document.body.className = 'mode-overview'; }, 1500);
 }
-function clearData() { if (confirm("確定要清空嗎？")) { saveDataToCloud({}); localStorage.removeItem(SAVE_KEY); location.reload(); } }
+function clearData() { if (!confirm("確定要清空待排貴賓區？（所有已排座位將一併釋放）")) return;
+
+    const session = sessions[currentSession];
+
+  session.seatMap = {};
+
+    session.guests = [];
+
+    selectedGuestId = null;
+
+     saveData();
+    render();
+}
 async function saveDataToCloud(dataObj) { await supabaseClient.from('seating_data').update({ config: dataObj }).eq('id', 1); }
 
 window.onload = () => { loadData(); };
