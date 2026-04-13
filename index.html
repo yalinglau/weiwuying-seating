@@ -162,7 +162,7 @@ const floor1Rows = [
     { row:"EE",total:32 },{ row:"FF",total:34,className:"ff-row" },{ row:"GG",total:38 },
     { row:"HH",total:38 },{ row:"II",total:36 },{ row:"JJ",total:36 },{ row:"KK",total:34 },
     { row:"LL",total:34 },{ row:"MM",total:32 },{ row:"NN",total:32 },{ row:"OO",total:32 },
-    { row:"PP",total:30 },{ row:"QQ",total:28 },{ row:"RR",total:20 } // 修正 1: RR 改為 20 座
+    { row:"PP",total:30 },{ row:"QQ",total:28 },{ row:"RR",total:20 }
 ];
 
 const floor2MainRows = [{ row:"J",total:60 },{ row:"K",total:60 },{ row:"L",total:60 },{ row:"M",total:60 }];
@@ -171,7 +171,7 @@ const floor3Rows = [
     { row:"R", total:106, lSplit:[15,43], rSplit:[16,44], lBlocked:[59,105], rBlocked:[60,106], useAbbr:true },
     { row:"S", total:59,  lSplit:[15,43], rSplit:[14,42] },
     { row:"T", total:62,  lSplit:[15,45], rSplit:[16,46] },
-    { row:"U", total:66,  lSplit:[15,49], rSplit:[14,48] },
+    { row:"U", total:67,  lSplit:[15,49], rSplit:[14,48] },
     { row:"V", total:64,  lSplit:[15,51], rSplit:[16,42] },
     { row:"W", total:59,  lSplit:[15,43], rSplit:[14,52] },
     { row:"X", total:62,  lSplit:[15,55], rSplit:[16,56] },
@@ -188,7 +188,7 @@ const floor4Rows = [
     { row:"G", total:53, lSplit:[11],    rSplit:[10] }
 ];
 
-// 其他包廂數據略 (保持與之前一致)...
+// 其他包廂數據
 const frontLeftBoxes = [{ row:"A",seats:[1,3,5,7],alignTo:"JJ" },{ row:"B",seats:[1,3,5,7,9,11],alignTo:"KK" },{ row:"C",seats:[1,3,5,7,9,11,13],alignTo:"LL" },{ row:"D",seats:[1,3,5,7,9,11,13,15],alignTo:"MM" },{ row:"E",seats:[1,3,5,7,9,11,13,15,17],alignTo:"NN" },{ row:"F",seats:[1,3,5,7,9,11,13,15,17,19],alignTo:"OO" },{ row:"G",seats:[1,3,5,7,9,11,13,15,17,19,21],alignTo:"PP" },{ row:"H",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25],alignTo:"QQ" },{ row:"I",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29],alignTo:"RR" }];
 const frontRightBoxes = [{ row:"A",seats:[2,4,6,8],alignTo:"JJ" },{ row:"B",seats:[2,4,6,8,10,12],alignTo:"KK" },{ row:"C",seats:[2,4,6,8,10,12,14],alignTo:"LL" },{ row:"D",seats:[2,4,6,8,10,12,14,16],alignTo:"MM" },{ row:"E",seats:[2,4,6,8,10,12,14,16,18],alignTo:"NN" },{ row:"F",seats:[2,4,6,8,10,12,14,16,18,20],alignTo:"OO" },{ row:"G",seats:[2,4,6,8,10,12,14,16,18,20,22],alignTo:"PP" },{ row:"H",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26],alignTo:"QQ" },{ row:"I",seats:[2,4,6,8,10,12,14,16,18,20,22,24,26,28,30],alignTo:"RR" }];
 const rearLeftBoxes = [{ row:"N",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43] },{ row:"O",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37] },{ row:"P",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25,27] },{ row:"Q",seats:[1,3,5,7,9,11,13,15,17,19,21,23,25] }];
@@ -238,7 +238,6 @@ function addGuest() {
     saveData(); render();
 }
 
-// 修正 3: 新增刪除功能
 function deleteGuest(e, id) {
     e.stopPropagation();
     if (!confirm("確定要刪除這位貴賓及其所有劃位嗎？")) return;
@@ -280,14 +279,20 @@ function render() {
     syncLayout();
 }
 
-// 修正 2: 待排區顯示備註
 function renderGuestList() {
-    const listEl = document.getElementById('guest-list'); listEl.innerHTML = "";
-    sessions[currentSession].guests.forEach(g => {
+    const listEl = document.getElementById('guest-list');
+    listEl.innerHTML = "";
+
+    const guests = sessions[currentSession].guests;
+    const pendingGuests = guests.filter(g => g.assigned < g.total);
+    const completedGuests = guests.filter(g => g.assigned >= g.total);
+    const orderedGuests = [...pendingGuests, ...completedGuests];
+
+    orderedGuests.forEach(g => {
         const item = document.createElement('div');
         const isFull = g.assigned >= g.total;
         item.className = `guest-item ${isFull ? 'completed' : ''} ${selectedGuestId === g.id ? 'selected' : ''}`;
-        
+
         item.innerHTML = `
             <div class="guest-info">
                 <span class="guest-name">${g.name} (${g.assigned}/${g.total})</span>
@@ -295,241 +300,480 @@ function renderGuestList() {
             </div>
             <div class="btn-delete" onclick="deleteGuest(event, '${g.id}')">✕</div>
         `;
-        if (!isFull) item.onclick = () => { selectedGuestId = g.id; render(); };
+
+        if (!isFull) {
+            item.onclick = () => {
+                selectedGuestId = g.id;
+                render();
+            };
+        }
         listEl.appendChild(item);
     });
 }
 
-function createSeat(row, num, typeClass = "", span = 1, borderColor = "#b7b7b7", isBlocked = false) {
-    const seatId = `${row}-${num}`;
+function createSeat(row, num, typeClass = "", span = 1, borderColor = "#b7b7b7", isBlocked = false, areaKey = null) {
+    const seatId = `${areaKey || row}-${num}`;
     const guestId = sessions[currentSession].seatMap[seatId];
     const guest = guestId ? sessions[currentSession].guests.find(g => g.id === guestId) : null;
     const seat = document.createElement("div");
-    
+
     seat.className = `seat ${typeClass} ${guest ? 'occupied has-border' : ''} ${isBlocked ? 'blocked' : ''}`.trim();
     seat.style.borderColor = guest ? colorMap[guestId] : borderColor;
-    
-    // 修正 2 (座位圖內): 保持只顯示姓名與張數，不顯示備註
+
     if (guest) {
         seat.dataset.guestId = guestId;
         seat.dataset.guestName = `${guest.name}(${guest.total})`;
     } else if (!isBlocked) {
         seat.textContent = (row === "HH" && hhCompanionSeats.includes(num)) ? "陪" : num;
     }
-    
+
     if (span === 2) seat.style.width = "110px";
     if (!isBlocked) seat.onclick = () => handleSeatClick(seatId);
     return seat;
 }
 
-// 渲染三四樓通用函式 (不變)
+// 渲染三四樓通用函式
 function renderFloorN(containerId, rowsData, stroke) {
-    const root = document.getElementById(containerId); root.innerHTML = "";
+    const root = document.getElementById(containerId);
+    root.innerHTML = "";
+
+    const areaPrefix = containerId === "floor3-rows" ? "3F" : "4F";
+
     rowsData.forEach(conf => {
-        const rowEl = document.createElement("div"); rowEl.className = "row";
-        const label = document.createElement("div"); label.className = "label"; label.textContent = conf.row;
-        const seatRow = document.createElement("div"); seatRow.className = "seat-row";
-        
-        const leftSide = document.createElement("div"); leftSide.className = "side";
-        const oddSeats = []; for(let n=1; n<=conf.total; n+=2) oddSeats.push(n);
+        const rowEl = document.createElement("div");
+        rowEl.className = "row";
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = conf.row;
+
+        const seatRow = document.createElement("div");
+        seatRow.className = "seat-row";
+
+        const leftSide = document.createElement("div");
+        leftSide.className = "side";
+        const oddSeats = [];
+        for(let n=1; n<=conf.total; n+=2) oddSeats.push(n);
         const lSplits = conf.lSplit || [];
         let lGroups = [[]];
-        oddSeats.forEach(n => { lGroups[lGroups.length-1].push(n); if(lSplits.includes(n)) lGroups.push([]); });
-        lGroups.reverse().forEach((group, idx) => {
-            const cluster = document.createElement("div"); cluster.className = "cluster";
-            let showSeats = [...group].sort((a,b)=>b-a);
-            if (conf.useAbbr && conf.lBlocked && showSeats.some(n => n >= conf.lBlocked[0])) {
-                showSeats = showSeats.filter(n => n < conf.lBlocked[0]);
-                for(let i=0; i<6; i++) cluster.appendChild(createSeat(conf.row, "B"+i, "", 1, "#000", true));
-            }
-            showSeats.forEach(n => {
-                const isBlocked = conf.lBlocked && n >= conf.lBlocked[0] && n <= conf.lBlocked[1];
-                cluster.appendChild(createSeat(conf.row, n, "", 1, stroke, isBlocked));
-            });
-            leftSide.appendChild(cluster); if(idx < lGroups.length-1) leftSide.appendChild(createGap());
+        oddSeats.forEach(n => {
+            lGroups[lGroups.length-1].push(n);
+            if(lSplits.includes(n)) lGroups.push([]);
         });
 
-        const rightSide = document.createElement("div"); rightSide.className = "side";
-        const evenSeats = []; for(let n=2; n<=conf.total; n+=2) evenSeats.push(n);
+        lGroups.reverse().forEach((group, idx) => {
+            const cluster = document.createElement("div");
+            cluster.className = "cluster";
+
+            let showSeats = [...group].sort((a,b)=>b-a);
+
+            if (conf.useAbbr && conf.lBlocked && showSeats.some(n => n >= conf.lBlocked[0])) {
+                showSeats = showSeats.filter(n => n < conf.lBlocked[0]);
+                for(let i=0; i<6; i++) {
+                    cluster.appendChild(createSeat(conf.row, "B"+i, "", 1, "#000", true, `${areaPrefix}-${conf.row}-L-BLOCK`));
+                }
+            }
+
+            showSeats.forEach(n => {
+                const isBlocked = conf.lBlocked && n >= conf.lBlocked[0] && n <= conf.lBlocked[1];
+                cluster.appendChild(createSeat(conf.row, n, "", 1, stroke, isBlocked, `${areaPrefix}-${conf.row}`));
+            });
+
+            leftSide.appendChild(cluster);
+            if(idx < lGroups.length-1) leftSide.appendChild(createGap());
+        });
+
+        const rightSide = document.createElement("div");
+        rightSide.className = "side";
+        const evenSeats = [];
+        for(let n=2; n<=conf.total; n+=2) evenSeats.push(n);
         const rSplits = conf.rSplit || [];
         let rGroups = [[]];
-        evenSeats.forEach(n => { rGroups[rGroups.length-1].push(n); if(rSplits.includes(n)) rGroups.push([]); });
+        evenSeats.forEach(n => {
+            rGroups[rGroups.length-1].push(n);
+            if(rSplits.includes(n)) rGroups.push([]);
+        });
+
         rGroups.forEach((group, idx) => {
-            const cluster = document.createElement("div"); cluster.className = "cluster";
+            const cluster = document.createElement("div");
+            cluster.className = "cluster";
+
             let showSeats = [...group].sort((a,b)=>a-b);
+
             if (conf.useAbbr && conf.rBlocked && showSeats.some(n => n >= conf.rBlocked[0])) {
                 showSeats = showSeats.filter(n => n < conf.rBlocked[0]);
-                showSeats.forEach(n => cluster.appendChild(createSeat(conf.row, n, "", 1, stroke, false)));
-                for(let i=0; i<6; i++) cluster.appendChild(createSeat(conf.row, "B"+i, "", 1, "#000", true));
+                showSeats.forEach(n => cluster.appendChild(createSeat(conf.row, n, "", 1, stroke, false, `${areaPrefix}-${conf.row}`)));
+                for(let i=0; i<6; i++) {
+                    cluster.appendChild(createSeat(conf.row, "B"+i, "", 1, "#000", true, `${areaPrefix}-${conf.row}-R-BLOCK`));
+                }
             } else {
                 showSeats.forEach(n => {
                     const isBlocked = conf.rBlocked && n >= conf.rBlocked[0] && n <= conf.rBlocked[1];
-                    cluster.appendChild(createSeat(conf.row, n, "", 1, stroke, isBlocked));
+                    cluster.appendChild(createSeat(conf.row, n, "", 1, stroke, isBlocked, `${areaPrefix}-${conf.row}`));
                 });
             }
-            rightSide.appendChild(cluster); if(idx < rGroups.length-1) rightSide.appendChild(createGap());
+
+            rightSide.appendChild(cluster);
+            if(idx < rGroups.length-1) rightSide.appendChild(createGap());
         });
-        seatRow.appendChild(leftSide); seatRow.appendChild(rightSide);
-        rowEl.appendChild(label); rowEl.appendChild(seatRow); root.appendChild(rowEl);
+
+        seatRow.appendChild(leftSide);
+        seatRow.appendChild(rightSide);
+        rowEl.appendChild(label);
+        rowEl.appendChild(seatRow);
+        root.appendChild(rowEl);
     });
 }
 
-// 其餘渲染邏輯 (Floor 1/2/Boxes/Subtitle...) 保持與上版相同
 function renderFloor1() {
-    const root = document.getElementById("floor1-rows"); root.innerHTML = "";
+    const root = document.getElementById("floor1-rows");
+    root.innerHTML = "";
     floor1Rows.forEach(conf => {
-        const rowEl = document.createElement("div"); rowEl.className = "row" + (conf.className ? ` ${conf.className}` : "");
-        const label = document.createElement("div"); label.className = "label"; label.textContent = conf.row;
-        const seatRow = document.createElement("div"); seatRow.className = "seat-row";
+        const rowEl = document.createElement("div");
+        rowEl.className = "row" + (conf.className ? ` ${conf.className}` : "");
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = conf.row;
+
+        const seatRow = document.createElement("div");
+        seatRow.className = "seat-row";
+
         seatRow.appendChild(buildLeftMainSide(conf, false));
         seatRow.appendChild(buildRightMainSide(conf, false));
-        rowEl.appendChild(label); rowEl.appendChild(seatRow); root.appendChild(rowEl);
+
+        rowEl.appendChild(label);
+        rowEl.appendChild(seatRow);
+        root.appendChild(rowEl);
     });
 }
+
 function renderFloor2Main() {
-    const root = document.getElementById("floor2-main"); root.innerHTML = "";
+    const root = document.getElementById("floor2-main");
+    root.innerHTML = "";
     floor2MainRows.forEach(conf => {
-        const rowEl = document.createElement("div"); rowEl.className = "row floor2-row";
-        const label = document.createElement("div"); label.className = "label"; label.textContent = conf.row;
-        const seatRow = document.createElement("div"); seatRow.className = "seat-row";
+        const rowEl = document.createElement("div");
+        rowEl.className = "row floor2-row";
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = conf.row;
+
+        const seatRow = document.createElement("div");
+        seatRow.className = "seat-row";
+
         seatRow.appendChild(buildLeftMainSide(conf, true));
         seatRow.appendChild(buildRightMainSide(conf, true));
-        rowEl.appendChild(label); rowEl.appendChild(seatRow); root.appendChild(rowEl);
+
+        rowEl.appendChild(label);
+        rowEl.appendChild(seatRow);
+        root.appendChild(rowEl);
     });
 }
+
 function buildLeftMainSide(conf, is2F) {
-    const side = document.createElement("div"); side.className = "side";
-    const outer = document.createElement("div"); outer.className = "cluster";
-    const inner = document.createElement("div"); inner.className = "cluster";
-    const oddSeats = []; for (let n = 1; n <= conf.total; n += 2) oddSeats.push(n);
+    const side = document.createElement("div");
+    side.className = "side";
+
+    const outer = document.createElement("div");
+    outer.className = "cluster";
+
+    const inner = document.createElement("div");
+    inner.className = "cluster";
+
+    const oddSeats = [];
+    for (let n = 1; n <= conf.total; n += 2) oddSeats.push(n);
+
     const splitPoint = (conf.row === "M") ? 13 : 15;
     const innerSeats = oddSeats.filter(n => n <= splitPoint).sort((a, b) => b - a);
     const outerSeats = oddSeats.filter(n => n > splitPoint).sort((a, b) => b - a);
-    outerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) outer.appendChild(s); });
-    innerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) inner.appendChild(s); });
-    if (outer.childNodes.length > 0) { side.appendChild(outer); side.appendChild(createGap()); }
-    side.appendChild(inner); return side;
+
+    outerSeats.forEach(n => {
+        const s = createSeatElement(conf.row, n, is2F);
+        if (s) outer.appendChild(s);
+    });
+
+    innerSeats.forEach(n => {
+        const s = createSeatElement(conf.row, n, is2F);
+        if (s) inner.appendChild(s);
+    });
+
+    if (outer.childNodes.length > 0) {
+        side.appendChild(outer);
+        side.appendChild(createGap());
+    }
+    side.appendChild(inner);
+    return side;
 }
+
 function buildRightMainSide(conf, is2F) {
-    const side = document.createElement("div"); side.className = "side";
-    const inner = document.createElement("div"); inner.className = "cluster";
-    const outer = document.createElement("div"); outer.className = "cluster";
-    const evenSeats = []; for (let n = 2; n <= conf.total; n += 2) evenSeats.push(n);
+    const side = document.createElement("div");
+    side.className = "side";
+
+    const inner = document.createElement("div");
+    inner.className = "cluster";
+
+    const outer = document.createElement("div");
+    outer.className = "cluster";
+
+    const evenSeats = [];
+    for (let n = 2; n <= conf.total; n += 2) evenSeats.push(n);
+
     const splitPoint = (conf.row === "M") ? 14 : 16;
     const innerSeats = evenSeats.filter(n => n <= splitPoint).sort((a, b) => a - b);
     const outerSeats = evenSeats.filter(n => n > splitPoint).sort((a, b) => a - b);
-    innerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) inner.appendChild(s); });
-    outerSeats.forEach(n => { const s = createSeatElement(conf.row, n, is2F); if (s) outer.appendChild(s); });
-    side.appendChild(inner); if (outer.childNodes.length > 0) { side.appendChild(createGap()); side.appendChild(outer); }
+
+    innerSeats.forEach(n => {
+        const s = createSeatElement(conf.row, n, is2F);
+        if (s) inner.appendChild(s);
+    });
+
+    outerSeats.forEach(n => {
+        const s = createSeatElement(conf.row, n, is2F);
+        if (s) outer.appendChild(s);
+    });
+
+    side.appendChild(inner);
+    if (outer.childNodes.length > 0) {
+        side.appendChild(createGap());
+        side.appendChild(outer);
+    }
     return side;
 }
+
 function createSeatElement(row, num, is2F) {
     if (row === "GG" && ggWheelchairHidden.includes(num)) return null;
-    let typeClass = ""; let span = 1;
-    if (row === "GG" && ggWheelchairStarts.includes(num)) { typeClass = "wheelchair"; span = 2; }
-    return createSeat(row, num, typeClass, span, is2F ? "#9fb5ff" : "#b7b7b7");
+
+    let typeClass = "";
+    let span = 1;
+
+    if (row === "GG" && ggWheelchairStarts.includes(num)) {
+        typeClass = "wheelchair";
+        span = 2;
+    }
+
+    const areaKey = is2F ? `2F-${row}` : `1F-${row}`;
+    return createSeat(row, num, typeClass, span, is2F ? "#9fb5ff" : "#b7b7b7", false, areaKey);
 }
+
 function renderRearBoxes() {
-    const leftRoot = document.getElementById("rear-left"); const rightRoot = document.getElementById("rear-right");
-    leftRoot.innerHTML = ""; rightRoot.innerHTML = "";
-    rearLeftBoxes.forEach(conf => leftRoot.appendChild(buildSimpleRow(conf.row, conf.seats, true, "rear-row")));
-    rearRightBoxes.forEach(conf => rightRoot.appendChild(buildSimpleRow(conf.row, conf.seats, false, "rear-row")));
+    const leftRoot = document.getElementById("rear-left");
+    const rightRoot = document.getElementById("rear-right");
+    leftRoot.innerHTML = "";
+    rightRoot.innerHTML = "";
+    rearLeftBoxes.forEach(conf => leftRoot.appendChild(buildSimpleRow(conf.row, conf.seats, true, "rear-row", `REAR-L-${conf.row}`)));
+    rearRightBoxes.forEach(conf => rightRoot.appendChild(buildSimpleRow(conf.row, conf.seats, false, "rear-row", `REAR-R-${conf.row}`)));
 }
+
 function renderFrontBoxes() {
-    const layer = document.getElementById("front-box-layer"); layer.innerHTML = "";
+    const layer = document.getElementById("front-box-layer");
+    layer.innerHTML = "";
     frontLeftBoxes.forEach(conf => layer.appendChild(buildFrontBoxRow(conf, true)));
     frontRightBoxes.forEach(conf => layer.appendChild(buildFrontBoxRow(conf, false)));
 }
+
 function buildFrontBoxRow(conf, isLeft) {
-    const rowEl = document.createElement("div"); rowEl.className = "front-box-row"; rowEl.dataset.alignTo = conf.alignTo; rowEl.dataset.side = isLeft ? "left" : "right";
-    const label = document.createElement("div"); label.className = "label"; label.textContent = conf.row;
-    const seatRow = document.createElement("div"); seatRow.className = "seat-row";
-    const cluster = document.createElement("div"); cluster.className = "cluster";
-    const list = [...conf.seats]; if (isLeft) list.reverse();
-    list.forEach(num => cluster.appendChild(createSeat(conf.row, num, "", 1, "#9fb5ff")));
-    rowEl.appendChild(label); rowEl.appendChild(seatRow); seatRow.appendChild(cluster); return rowEl;
+    const rowEl = document.createElement("div");
+    rowEl.className = "front-box-row";
+    rowEl.dataset.alignTo = conf.alignTo;
+    rowEl.dataset.side = isLeft ? "left" : "right";
+
+    const label = document.createElement("div");
+    label.className = "label";
+    label.textContent = conf.row;
+
+    const seatRow = document.createElement("div");
+    seatRow.className = "seat-row";
+
+    const cluster = document.createElement("div");
+    cluster.className = "cluster";
+
+    const list = [...conf.seats];
+    if (isLeft) list.reverse();
+
+    const areaKeyPrefix = isLeft ? `FBOX-L-${conf.row}` : `FBOX-R-${conf.row}`;
+    list.forEach(num => cluster.appendChild(createSeat(conf.row, num, "", 1, "#9fb5ff", false, areaKeyPrefix)));
+
+    rowEl.appendChild(label);
+    rowEl.appendChild(seatRow);
+    seatRow.appendChild(cluster);
+    return rowEl;
 }
-function buildSimpleRow(labelText, seats, isLeft, rowClassName) {
-    const rowEl = document.createElement("div"); rowEl.className = `row ${rowClassName}`;
-    const label = document.createElement("div"); label.className = "label"; label.textContent = labelText;
-    const seatRow = document.createElement("div"); seatRow.className = "seat-row";
-    const cluster = document.createElement("div"); cluster.className = "cluster";
-    const list = [...seats]; if (isLeft) list.sort((a, b) => b - a); else list.sort((a, b) => a - b);
-    list.forEach(num => cluster.appendChild(createSeat(labelText, num, "", 1, "#9fb5ff")));
-    rowEl.appendChild(label); rowEl.appendChild(seatRow); seatRow.appendChild(cluster); return rowEl;
+
+function buildSimpleRow(labelText, seats, isLeft, rowClassName, areaKeyPrefix) {
+    const rowEl = document.createElement("div");
+    rowEl.className = `row ${rowClassName}`;
+
+    const label = document.createElement("div");
+    label.className = "label";
+    label.textContent = labelText;
+
+    const seatRow = document.createElement("div");
+    seatRow.className = "seat-row";
+
+    const cluster = document.createElement("div");
+    cluster.className = "cluster";
+
+    const list = [...seats];
+    if (isLeft) list.sort((a, b) => b - a);
+    else list.sort((a, b) => a - b);
+
+    list.forEach(num => cluster.appendChild(createSeat(labelText, num, "", 1, "#9fb5ff", false, areaKeyPrefix)));
+
+    rowEl.appendChild(label);
+    rowEl.appendChild(seatRow);
+    seatRow.appendChild(cluster);
+    return rowEl;
 }
-function createGap() { const g = document.createElement("div"); g.className = "gap"; return g; }
+
+function createGap() {
+    const g = document.createElement("div");
+    g.className = "gap";
+    return g;
+}
 
 // --- 佈局輔助 ---
-function syncLayout() { postProcessNames(); syncSubtitleBoxes(); syncFrontBoxPositions(); syncFrontColumnWidths(); }
+function syncLayout() {
+    postProcessNames();
+    syncSubtitleBoxes();
+    syncFrontBoxPositions();
+    syncFrontColumnWidths();
+}
+
 function postProcessNames() {
     document.querySelectorAll('.seat-row').forEach(rowEl => {
         const seats = Array.from(rowEl.querySelectorAll('.seat[data-guest-id]'));
         const groups = {};
-        seats.forEach(s => { const gid = s.dataset.guestId; if (!groups[gid]) groups[gid] = []; groups[gid].push(s); });
+        seats.forEach(s => {
+            const gid = s.dataset.guestId;
+            if (!groups[gid]) groups[gid] = [];
+            groups[gid].push(s);
+        });
         for (let gid in groups) {
-            const gSeats = groups[gid]; gSeats.forEach(s => s.textContent = "");
-            const mid = Math.floor(gSeats.length / 2); gSeats[mid].textContent = gSeats[mid].dataset.guestName;
+            const gSeats = groups[gid];
+            gSeats.forEach(s => s.textContent = "");
+            const mid = Math.floor(gSeats.length / 2);
+            gSeats[mid].textContent = gSeats[mid].dataset.guestName;
         }
     });
 }
+
 function syncSubtitleBoxes() {
-    const shell = document.getElementById("floor1-shell"); const leftBox = document.getElementById("left-subtitle"); const rightBox = document.getElementById("right-subtitle");
+    const shell = document.getElementById("floor1-shell");
+    const leftBox = document.getElementById("left-subtitle");
+    const rightBox = document.getElementById("right-subtitle");
     const targetRows = ["P1","P2","P3","P4","AA","BB","CC"].map(row => document.querySelector(`#floor1-rows .row:nth-child(${["P1","P2","P3","P4","AA","BB","CC"].indexOf(row)+1})`)).filter(Boolean);
     if (!shell || !leftBox || !rightBox || targetRows.length === 0) return;
-    const shellRect = shell.getBoundingClientRect(); const firstRect = targetRows[0].getBoundingClientRect(); const lastRect = targetRows[targetRows.length - 1].getBoundingClientRect();
+
+    const shellRect = shell.getBoundingClientRect();
+    const firstRect = targetRows[0].getBoundingClientRect();
+    const lastRect = targetRows[targetRows.length - 1].getBoundingClientRect();
+
     let minL = Infinity, maxR = -Infinity;
-    targetRows.forEach(row => { const sr = row.querySelector(".seat-row"); if (!sr) return; const rect = sr.getBoundingClientRect(); minL = Math.min(minL, rect.left - shellRect.left); maxR = Math.max(maxR, rect.right - shellRect.left); });
-    leftBox.style.top = rightBox.style.top = `${firstRect.top - shellRect.top}px`; leftBox.style.height = rightBox.style.height = `${lastRect.bottom - firstRect.top}px`;
-    leftBox.style.left = `${minL - leftBox.offsetWidth - 8}px`; rightBox.style.left = `${maxR + 8}px`;
+    targetRows.forEach(row => {
+        const sr = row.querySelector(".seat-row");
+        if (!sr) return;
+        const rect = sr.getBoundingClientRect();
+        minL = Math.min(minL, rect.left - shellRect.left);
+        maxR = Math.max(maxR, rect.right - shellRect.left);
+    });
+
+    leftBox.style.top = rightBox.style.top = `${firstRect.top - shellRect.top}px`;
+    leftBox.style.height = rightBox.style.height = `${lastRect.bottom - firstRect.top}px`;
+    leftBox.style.left = `${minL - leftBox.offsetWidth - 8}px`;
+    rightBox.style.left = `${maxR + 8}px`;
 }
+
 function syncFrontBoxPositions() {
-    const shell = document.getElementById("floor1-shell"); const layer = document.getElementById("front-box-layer"); if (!shell || !layer) return;
-    const shellRect = shell.getBoundingClientRect(); let minL = Infinity, maxR = -Infinity;
-    floor1Rows.forEach((conf, idx) => { const row = document.querySelector(`#floor1-rows .row:nth-child(${idx+1})`); if (row) { const sr = row.querySelector(".seat-row"); if (sr) { const r = sr.getBoundingClientRect(); minL = Math.min(minL, r.left - shellRect.left); maxR = Math.max(maxR, r.right - shellRect.left); } } });
+    const shell = document.getElementById("floor1-shell");
+    const layer = document.getElementById("front-box-layer");
+    if (!shell || !layer) return;
+
+    const shellRect = shell.getBoundingClientRect();
+    let minL = Infinity, maxR = -Infinity;
+
+    floor1Rows.forEach((conf, idx) => {
+        const row = document.querySelector(`#floor1-rows .row:nth-child(${idx+1})`);
+        if (row) {
+            const sr = row.querySelector(".seat-row");
+            if (sr) {
+                const r = sr.getBoundingClientRect();
+                minL = Math.min(minL, r.left - shellRect.left);
+                maxR = Math.max(maxR, r.right - shellRect.left);
+            }
+        }
+    });
+
     layer.querySelectorAll('.front-box-row').forEach(rowEl => {
         const target = Array.from(document.querySelectorAll('#floor1-rows .row')).find(r => r.textContent.includes(rowEl.dataset.alignTo));
-        if (!target) return; const tr = target.getBoundingClientRect();
+        if (!target) return;
+        const tr = target.getBoundingClientRect();
         rowEl.style.top = `${(tr.top - shellRect.top) + (tr.height - rowEl.offsetHeight) / 2}px`;
         rowEl.style.left = (rowEl.dataset.side === "left") ? `${minL - rowEl.offsetWidth - 36}px` : `${maxR + 36}px`;
     });
 }
+
 function syncFrontColumnWidths() {
     let lMax = 0, rMax = 0;
     Array.from(document.querySelectorAll('.front-box-row[data-side="left"]')).forEach(el => lMax = Math.max(lMax, el.offsetWidth));
     Array.from(document.querySelectorAll('.front-box-row[data-side="right"]')).forEach(el => rMax = Math.max(rMax, el.offsetWidth));
-    const flf = document.getElementById("floor2-left-front"); if(flf) flf.style.width = `${lMax}px`;
-    const frf = document.getElementById("floor2-right-front"); if(frf) frf.style.width = `${rMax}px`;
+    const flf = document.getElementById("floor2-left-front");
+    if(flf) flf.style.width = `${lMax}px`;
+    const frf = document.getElementById("floor2-right-front");
+    if(frf) frf.style.width = `${rMax}px`;
 }
+
 function getVisualBounds() {
-    const canvas = document.getElementById('main-canvas'); const canvasRect = canvas.getBoundingClientRect();
+    const canvas = document.getElementById('main-canvas');
+    const canvasRect = canvas.getBoundingClientRect();
     let minX = 0, maxX = canvasRect.width, maxY = canvasRect.height;
-    canvas.querySelectorAll('*').forEach(el => { const r = el.getBoundingClientRect(); if (r.width === 0 && r.height === 0) return; const left = r.left - canvasRect.left; const right = r.right - canvasRect.left; const bot = r.bottom - canvasRect.top; if (left < minX) minX = left; if (right > maxX) maxX = right; if (bot > maxY) maxY = bot; });
+    canvas.querySelectorAll('*').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return;
+        const left = r.left - canvasRect.left;
+        const right = r.right - canvasRect.left;
+        const bot = r.bottom - canvasRect.top;
+        if (left < minX) minX = left;
+        if (right > maxX) maxX = right;
+        if (bot > maxY) maxY = bot;
+    });
     return { minX, maxX, maxY, totalW: maxX - minX, totalH: maxY };
 }
+
 function doPrint(mode) {
     document.body.className = (mode === 'split') ? 'mode-split' : 'mode-overview';
-    const canvas = document.getElementById('main-canvas'); const { minX, totalW, totalH } = getVisualBounds();
-    const A3W_PX = 1587; const A3H_PX = 1122; const PADDING = 16;
-    const scaleW = (A3W_PX - PADDING * 2) / totalW; const scaleH = (A3H_PX - PADDING * 2) / totalH; const scale = Math.min(scaleW, scaleH);
+    const canvas = document.getElementById('main-canvas');
+    const { minX, totalW, totalH } = getVisualBounds();
+    const A3W_PX = 1587;
+    const A3H_PX = 1122;
+    const PADDING = 16;
+    const scaleW = (A3W_PX - PADDING * 2) / totalW;
+    const scaleH = (A3H_PX - PADDING * 2) / totalH;
+    const scale = Math.min(scaleW, scaleH);
     canvas.style.transform = `translate(${-minX * scale + PADDING}px, ${PADDING}px) scale(${scale})`;
     window.print();
-    setTimeout(() => { canvas.style.transform = ''; document.body.className = 'mode-overview'; }, 1500);
+    setTimeout(() => {
+        canvas.style.transform = '';
+        document.body.className = 'mode-overview';
+    }, 1500);
 }
-function clearData() { if (!confirm("確定要清空待排貴賓區？（所有已排座位將一併釋放）")) return;
+
+function clearData() {
+    if (!confirm("確定要清空待排貴賓區？（所有已排座位將一併釋放）")) return;
 
     const session = sessions[currentSession];
 
-  session.seatMap = {};
-
+    session.seatMap = {};
     session.guests = [];
-
     selectedGuestId = null;
 
-     saveData();
+    saveData();
     render();
 }
-async function saveDataToCloud(dataObj) { await supabaseClient.from('seating_data').update({ config: dataObj }).eq('id', 1); }
+
+async function saveDataToCloud(dataObj) {
+    await supabaseClient.from('seating_data').update({ config: dataObj }).eq('id', 1);
+}
 
 window.onload = () => { loadData(); };
 window.onresize = () => requestAnimationFrame(syncLayout);
