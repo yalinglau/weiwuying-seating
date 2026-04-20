@@ -22,6 +22,8 @@ body{overflow:hidden}
 .input-group{ display:flex; flex-direction:column; gap:8px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #eee; }
 .input-group input{ width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; }
 
+.section-title{ font-weight:800; color:#333; }
+
 .btn-confirm{ background:#28a745; color:white; border:none; padding:12px; font-weight:700; cursor:pointer; border-radius:4px; }
 .guest-list-container{ flex:1; display:flex; flex-direction:column; min-height:0; }
 .guest-list{ overflow-y:auto; border:1px solid #eee; border-radius:4px; flex:1; }
@@ -39,15 +41,23 @@ body{overflow:hidden}
 
 /* --- 座位圖核心佈局 --- */
 #main-content{ overflow:auto; padding:40px 28px 80px; background:#e9ecef; }
-.canvas{ display:flex; flex-direction:column; align-items:center; width:max-content; margin:0 auto; background:#e9ecef; }
+.canvas{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    width:max-content;
+    margin:0 auto;
+    background:#e9ecef;
+    position:relative;
+}
 .stage{ width:625px; height:50px; background:#2f4358; color:#fff; text-align:center; line-height:50px; margin-bottom:60px; border-radius:0 0 42px 42px; font-size:20px; font-weight:800; }
 
 .floor1-shell{ position:relative; width:max-content; margin:0 auto; }
-.rows{ display:flex; flex-direction:column; align-items:center; width:max-content; }
-.row{ display:flex; align-items:center; margin-bottom:12px; width:max-content; }
+.rows{ display:flex; flex-direction:column; align-items:center; width:max-content; position:relative; z-index:2; }
+.row{ display:flex; align-items:center; margin-bottom:12px; width:max-content; position:relative; z-index:2; }
 .row.ff-row{ margin-bottom:50px; }
 .label{ width:54px; text-align:right; margin-right:18px; font-size:18px; font-weight:800; color:#000; flex-shrink:0; }
-.seat-row{ display:flex; align-items:center; width:max-content; }
+.seat-row{ display:flex; align-items:center; width:max-content; position:relative; z-index:2; }
 .side{ display:flex; align-items:center; }
 .cluster{ display:flex; align-items:center; }
 .gap{ width:44px; flex:0 0 44px; }
@@ -56,6 +66,7 @@ body{overflow:hidden}
     width:54px; height:54px; margin:0 3px; border:1px solid #b7b7b7; background:#fff;
     display:flex; align-items:center; justify-content:center; font-size:11px; border-radius:4px;
     cursor:pointer; text-align:center; line-height:1.1; overflow:hidden; word-break:break-all;
+    position:relative; z-index:3;
 }
 .seat.occupied{ font-weight:700; color:#000; }
 .seat.has-border{ border-width:3px !important; }
@@ -63,24 +74,45 @@ body{overflow:hidden}
 .seat.wheelchair{ background:#e8f5e9; border:2px solid #4caf50; font-weight:700; }
 .seat.blocked { background: #000 !important; border-color: #000 !important; color: #000 !important; cursor: default !important; pointer-events: none; }
 
-.floor2-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; }
+.floor2-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; position:relative; }
 .floor2-main{ display:flex; flex-direction:column; align-items:center; width:max-content; }
-.rear-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; }
+.rear-shell{ margin-top:90px; display:grid; grid-template-columns:auto auto auto; column-gap:24px; align-items:start; width:max-content; position:relative; }
 #rear-left{ display:flex; flex-direction:column; align-items:flex-end; }
 #rear-left .row{ width:100%; justify-content:flex-end; }
 .center-space{ width:520px; min-height:10px; }
 
-.floor3-shell, .floor4-shell { margin-top:60px; display:flex; flex-direction:column; align-items:center; width:max-content; }
+.floor3-shell, .floor4-shell { margin-top:60px; display:flex; flex-direction:column; align-items:center; width:max-content; position:relative; }
 .floor-title { font-size: 24px; font-weight: 800; margin: 30px 0 15px; color: #555; border-bottom: 2px solid #ccc; width: 100%; text-align: center; padding-bottom: 5px;}
 
 .subtitle-box{ position:absolute; width:64px; background:#d9dde2; border:1px solid #aeb6bf; display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; color:#4b5563; font-size:14px; z-index:2; }
 .front-box-layer{ position:absolute; inset:0; pointer-events:none; z-index:3; }
 .front-box-row{ position:absolute; display:flex; align-items:center; width:max-content; pointer-events:auto; }
 
+/* 單層群組外框圖層 */
+#guest-outline-layer{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:4;
+    overflow:visible;
+}
+#guest-outline-svg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    overflow:visible;
+}
+.guest-outline-path{
+    fill:none;
+    stroke-width:4;
+    stroke-linejoin:round;
+    stroke-linecap:round;
+}
+
 /* =============================================
    列印樣式
    ============================================= */
-#print-split-container { display: none; }
 @media print {
     @page { size: A3 landscape; margin: 0; }
     body { background: #e9ecef !important; overflow: visible !important; height: auto !important; }
@@ -113,12 +145,16 @@ body{overflow:hidden}
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <button class="btn-confirm" style="background:#dc3545" onclick="clearData()">清空重來</button>
             <button class="btn-confirm" style="background:#6c757d" onclick="doPrint('overview')">單頁總覽列印</button>
-            <button class="btn-confirm" style="background:#495057; grid-column:1/-1" onclick="doPrint('split')">雙頁分割列印</button>
+            <button class="btn-confirm" style="background:#495057; grid-column:1/-1" onclick="exportSeatTable()">輸出座位表(EXCEL)</button>
         </div>
     </aside>
 
     <main id="main-content">
         <div class="canvas" id="main-canvas">
+            <svg id="guest-outline-layer" aria-hidden="true">
+                <svg id="guest-outline-svg"></svg>
+            </svg>
+
             <div class="stage">舞台 STAGE</div>
             <div id="floor1-shell" class="floor1-shell">
                 <div id="left-subtitle" class="subtitle-box">L排字幕工作區</div>
@@ -173,7 +209,7 @@ const floor3Rows = [
     { row:"T", total:62,  lSplit:[15,45], rSplit:[16,46] },
     { row:"U", total:67,  lSplit:[15,49], rSplit:[14,48] },
     { row:"V", total:64,  lSplit:[15,51], rSplit:[16,42] },
-    { row:"W", total:59,  lSplit:[15,43], rSplit:[14,52] },
+    { row:"W", total:61,  lSplit:[15,43], rSplit:[14,52] },
     { row:"X", total:62,  lSplit:[15,55], rSplit:[16,56] },
     { row:"Y", total:53,  lSplit:[11],    rSplit:[10] }
 ];
@@ -219,7 +255,8 @@ async function loadData() {
 }
 
 function switchSession(s) {
-    currentSession = s; selectedGuestId = null;
+    currentSession = s;
+    selectedGuestId = null;
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('onclick').includes(s)));
     render();
 }
@@ -229,30 +266,39 @@ function addGuest() {
     const count = parseInt(document.getElementById('inCount').value);
     const note = document.getElementById('inNote').value.trim();
     if (!name || isNaN(count)) return alert("請填寫姓名與張數");
+
     const id = "g-" + Date.now();
     sessions[currentSession].guests.push({ id, name, total: count, assigned: 0, note });
     colorMap[id] = colors[sessions[currentSession].guests.length % colors.length];
+
     document.getElementById('inName').value = "";
     document.getElementById('inCount').value = "";
     document.getElementById('inNote').value = "";
-    saveData(); render();
+
+    saveData();
+    render();
 }
 
 function deleteGuest(e, id) {
     e.stopPropagation();
     if (!confirm("確定要刪除這位貴賓及其所有劃位嗎？")) return;
+
     const session = sessions[currentSession];
     session.guests = session.guests.filter(g => g.id !== id);
+
     for (let seatId in session.seatMap) {
         if (session.seatMap[seatId] === id) delete session.seatMap[seatId];
     }
+
     if (selectedGuestId === id) selectedGuestId = null;
-    saveData(); render();
+    saveData();
+    render();
 }
 
 function handleSeatClick(seatId) {
     const session = sessions[currentSession];
     const existingGuestId = session.seatMap[seatId];
+
     if (existingGuestId) {
         const g = session.guests.find(g => g.id === existingGuestId);
         if (g) g.assigned--;
@@ -265,7 +311,9 @@ function handleSeatClick(seatId) {
             if (g.assigned === g.total) selectedGuestId = null;
         }
     }
-    saveData(); render();
+
+    saveData();
+    render();
 }
 
 function render() {
@@ -319,6 +367,10 @@ function createSeat(row, num, typeClass = "", span = 1, borderColor = "#b7b7b7",
 
     seat.className = `seat ${typeClass} ${guest ? 'occupied has-border' : ''} ${isBlocked ? 'blocked' : ''}`.trim();
     seat.style.borderColor = guest ? colorMap[guestId] : borderColor;
+    seat.dataset.seatId = seatId;
+    seat.dataset.areaKey = areaKey || row;
+    seat.dataset.rowLabel = row;
+    seat.dataset.seatNumber = num;
 
     if (guest) {
         seat.dataset.guestId = guestId;
@@ -329,6 +381,7 @@ function createSeat(row, num, typeClass = "", span = 1, borderColor = "#b7b7b7",
 
     if (span === 2) seat.style.width = "110px";
     if (!isBlocked) seat.onclick = () => handleSeatClick(seatId);
+
     return seat;
 }
 
@@ -638,6 +691,8 @@ function syncLayout() {
     syncSubtitleBoxes();
     syncFrontBoxPositions();
     syncFrontColumnWidths();
+    syncOutlineCanvasSize();
+    drawGuestOutlines();
 }
 
 function postProcessNames() {
@@ -649,6 +704,7 @@ function postProcessNames() {
             if (!groups[gid]) groups[gid] = [];
             groups[gid].push(s);
         });
+
         for (let gid in groups) {
             const gSeats = groups[gid];
             gSeats.forEach(s => s.textContent = "");
@@ -662,7 +718,10 @@ function syncSubtitleBoxes() {
     const shell = document.getElementById("floor1-shell");
     const leftBox = document.getElementById("left-subtitle");
     const rightBox = document.getElementById("right-subtitle");
-    const targetRows = ["P1","P2","P3","P4","AA","BB","CC"].map(row => document.querySelector(`#floor1-rows .row:nth-child(${["P1","P2","P3","P4","AA","BB","CC"].indexOf(row)+1})`)).filter(Boolean);
+    const targetRows = ["P1","P2","P3","P4","AA","BB","CC"]
+        .map(row => document.querySelector(`#floor1-rows .row:nth-child(${["P1","P2","P3","P4","AA","BB","CC"].indexOf(row)+1})`))
+        .filter(Boolean);
+
     if (!shell || !leftBox || !rightBox || targetRows.length === 0) return;
 
     const shellRect = shell.getBoundingClientRect();
@@ -717,16 +776,207 @@ function syncFrontColumnWidths() {
     let lMax = 0, rMax = 0;
     Array.from(document.querySelectorAll('.front-box-row[data-side="left"]')).forEach(el => lMax = Math.max(lMax, el.offsetWidth));
     Array.from(document.querySelectorAll('.front-box-row[data-side="right"]')).forEach(el => rMax = Math.max(rMax, el.offsetWidth));
+
     const flf = document.getElementById("floor2-left-front");
     if(flf) flf.style.width = `${lMax}px`;
+
     const frf = document.getElementById("floor2-right-front");
     if(frf) frf.style.width = `${rMax}px`;
+}
+
+function syncOutlineCanvasSize() {
+    const canvas = document.getElementById('main-canvas');
+    const svgWrap = document.getElementById('guest-outline-layer');
+    const svg = document.getElementById('guest-outline-svg');
+    if (!canvas || !svgWrap || !svg) return;
+
+    const rect = canvas.getBoundingClientRect();
+    svgWrap.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+    svgWrap.setAttribute('width', rect.width);
+    svgWrap.setAttribute('height', rect.height);
+
+    svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+    svg.setAttribute('width', rect.width);
+    svg.setAttribute('height', rect.height);
+}
+
+function drawGuestOutlines() {
+    const canvas = document.getElementById('main-canvas');
+    const svg = document.getElementById('guest-outline-svg');
+    if (!canvas || !svg) return;
+
+    svg.innerHTML = "";
+    const canvasRect = canvas.getBoundingClientRect();
+    const allGuestSeats = Array.from(document.querySelectorAll('.seat[data-guest-id]'));
+
+    const guestMap = {};
+    allGuestSeats.forEach(seat => {
+        const gid = seat.dataset.guestId;
+        if (!guestMap[gid]) guestMap[gid] = [];
+        guestMap[gid].push(seat);
+    });
+
+    Object.keys(guestMap).forEach(gid => {
+        const color = colorMap[gid] || "#2196f3";
+        const rects = guestMap[gid].map(el => {
+            const r = el.getBoundingClientRect();
+            return {
+                left: r.left - canvasRect.left,
+                right: r.right - canvasRect.left,
+                top: r.top - canvasRect.top,
+                bottom: r.bottom - canvasRect.top
+            };
+        });
+
+        const d = buildOutlinePathFromSeatRects(rects, 4, 6);
+        if (!d) return;
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        path.setAttribute("stroke", color);
+        path.setAttribute("class", "guest-outline-path");
+        svg.appendChild(path);
+    });
+}
+
+function buildOutlinePathFromSeatRects(rects, padX = 0, padY = 0) {
+    if (!rects.length) return "";
+
+    const expanded = rects.map(r => ({
+        left: round2(r.left - padX),
+        right: round2(r.right + padX),
+        top: round2(r.top - padY),
+        bottom: round2(r.bottom + padY)
+    }));
+
+    const xs = [...new Set(expanded.flatMap(r => [r.left, r.right]))].sort((a,b)=>a-b);
+    const ys = [...new Set(expanded.flatMap(r => [r.top, r.bottom]))].sort((a,b)=>a-b);
+    if (xs.length < 2 || ys.length < 2) return "";
+
+    const filled = [];
+    for (let yi = 0; yi < ys.length - 1; yi++) {
+        filled[yi] = [];
+        for (let xi = 0; xi < xs.length - 1; xi++) {
+            const cx = (xs[xi] + xs[xi + 1]) / 2;
+            const cy = (ys[yi] + ys[yi + 1]) / 2;
+            filled[yi][xi] = expanded.some(r =>
+                cx > r.left && cx < r.right && cy > r.top && cy < r.bottom
+            );
+        }
+    }
+
+    const edges = [];
+    for (let yi = 0; yi < ys.length - 1; yi++) {
+        for (let xi = 0; xi < xs.length - 1; xi++) {
+            if (!filled[yi][xi]) continue;
+
+            const x1 = xs[xi], x2 = xs[xi + 1];
+            const y1 = ys[yi], y2 = ys[yi + 1];
+
+            if (yi === 0 || !filled[yi - 1][xi]) edges.push([[x1, y1], [x2, y1]]);
+            if (xi === xs.length - 2 || !filled[yi][xi + 1]) edges.push([[x2, y1], [x2, y2]]);
+            if (yi === ys.length - 2 || !filled[yi + 1][xi]) edges.push([[x2, y2], [x1, y2]]);
+            if (xi === 0 || !filled[yi][xi - 1]) edges.push([[x1, y2], [x1, y1]]);
+        }
+    }
+
+    if (!edges.length) return "";
+
+    const startMap = new Map();
+    edges.forEach(([a, b]) => {
+        const key = pointKey(a);
+        if (!startMap.has(key)) startMap.set(key, []);
+        startMap.get(key).push(b);
+    });
+
+    const used = new Set();
+    const loops = [];
+
+    edges.forEach(([edgeStart, edgeEnd]) => {
+        const firstKey = segmentKey(edgeStart, edgeEnd);
+        if (used.has(firstKey)) return;
+
+        const loop = [edgeStart, edgeEnd];
+        used.add(firstKey);
+
+        while (true) {
+            const current = loop[loop.length - 1];
+            const prev = loop[loop.length - 2];
+            const nextCandidates = (startMap.get(pointKey(current)) || [])
+                .filter(p => !used.has(segmentKey(current, p)));
+
+            if (!nextCandidates.length) break;
+
+            const next = chooseNextPoint(prev, current, nextCandidates);
+            used.add(segmentKey(current, next));
+            loop.push(next);
+
+            if (pointKey(next) === pointKey(loop[0])) break;
+        }
+
+        if (loop.length >= 4) loops.push(loop);
+    });
+
+    return loops.map(loop => {
+        const pts = simplifyCollinear(loop);
+        return "M " + pts.map(p => `${p[0]} ${p[1]}`).join(" L ") + " Z";
+    }).join(" ");
+}
+
+function round2(n) {
+    return Math.round(n * 100) / 100;
+}
+
+function pointKey(p) {
+    return `${round2(p[0])},${round2(p[1])}`;
+}
+
+function segmentKey(a, b) {
+    return `${pointKey(a)}>${pointKey(b)}`;
+}
+
+function chooseNextPoint(prev, current, candidates) {
+    if (candidates.length === 1) return candidates[0];
+
+    const dirPrev = [current[0] - prev[0], current[1] - prev[1]];
+    const scored = candidates.map(p => {
+        const dir = [p[0] - current[0], p[1] - current[1]];
+        const straight = (dir[0] === dirPrev[0] && dir[1] === dirPrev[1]) ? 0 : 1;
+        return { p, straight };
+    }).sort((a,b)=>a.straight-b.straight);
+
+    return scored[0].p;
+}
+
+function simplifyCollinear(points) {
+    if (points.length <= 3) return points;
+    const result = [points[0]];
+
+    for (let i = 1; i < points.length - 1; i++) {
+        const a = result[result.length - 1];
+        const b = points[i];
+        const c = points[i + 1];
+
+        const abx = b[0] - a[0];
+        const aby = b[1] - a[1];
+        const bcx = c[0] - b[0];
+        const bcy = c[1] - b[1];
+
+        if (abx * bcy === aby * bcx) {
+            continue;
+        }
+        result.push(b);
+    }
+
+    result.push(points[points.length - 1]);
+    return result;
 }
 
 function getVisualBounds() {
     const canvas = document.getElementById('main-canvas');
     const canvasRect = canvas.getBoundingClientRect();
     let minX = 0, maxX = canvasRect.width, maxY = canvasRect.height;
+
     canvas.querySelectorAll('*').forEach(el => {
         const r = el.getBoundingClientRect();
         if (r.width === 0 && r.height === 0) return;
@@ -737,11 +987,12 @@ function getVisualBounds() {
         if (right > maxX) maxX = right;
         if (bot > maxY) maxY = bot;
     });
+
     return { minX, maxX, maxY, totalW: maxX - minX, totalH: maxY };
 }
 
 function doPrint(mode) {
-    document.body.className = (mode === 'split') ? 'mode-split' : 'mode-overview';
+    document.body.className = 'mode-overview';
     const canvas = document.getElementById('main-canvas');
     const { minX, totalW, totalH } = getVisualBounds();
     const A3W_PX = 1587;
@@ -752,6 +1003,7 @@ function doPrint(mode) {
     const scale = Math.min(scaleW, scaleH);
     canvas.style.transform = `translate(${-minX * scale + PADDING}px, ${PADDING}px) scale(${scale})`;
     window.print();
+
     setTimeout(() => {
         canvas.style.transform = '';
         document.body.className = 'mode-overview';
@@ -762,13 +1014,222 @@ function clearData() {
     if (!confirm("確定要清空待排貴賓區？（所有已排座位將一併釋放）")) return;
 
     const session = sessions[currentSession];
-
     session.seatMap = {};
     session.guests = [];
     selectedGuestId = null;
 
     saveData();
     render();
+}
+
+// --- EXCEL 座位表輸出 ---
+function exportSeatTable() {
+    const session = sessions[currentSession];
+    const guestLookup = {};
+    session.guests.forEach(g => guestLookup[g.id] = g);
+
+    const byGuest = {};
+    Object.entries(session.seatMap).forEach(([seatId, guestId]) => {
+        if (!byGuest[guestId]) byGuest[guestId] = [];
+        byGuest[guestId].push(parseSeatIdForExport(seatId));
+    });
+
+    const rows = Object.keys(byGuest).map(guestId => {
+        const guest = guestLookup[guestId];
+        const seatEntries = byGuest[guestId];
+
+        const grouped = {};
+        seatEntries.forEach(item => {
+            const key = item.displayKey;
+            if (!grouped[key]) {
+                grouped[key] = {
+                    sortKey: item.sortKey,
+                    labelPrefix: item.labelPrefix,
+                    numbers: []
+                };
+            }
+            grouped[key].numbers.push(item.number);
+        });
+
+        const parts = Object.values(grouped)
+            .sort((a, b) => a.sortKey - b.sortKey || a.labelPrefix.localeCompare(b.labelPrefix, 'zh-Hant'))
+            .map(group => `${group.labelPrefix}${compressSeatNumbers(group.numbers)}`);
+
+        return {
+            guestName: guest ? guest.name : guestId,
+            text: `${parts.join(', ')}`
+        };
+    }).sort((a, b) => a.guestName.localeCompare(b.guestName, 'zh-Hant'));
+
+    let tableHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid #666; padding: 8px; font-size: 12pt; vertical-align: top; }
+                th { background: #d9e2f3; font-weight: bold; }
+                .title { font-size: 14pt; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <tr><th class="title">場次</th><td>${currentSession === 'afternoon' ? '下午場' : '晚上場'}</td></tr>
+            </table>
+            <br>
+            <table>
+                <tr>
+                    <th style="width:180px;">貴賓姓名</th>
+                    <th>座位表</th>
+                </tr>
+                ${rows.map(r => `
+                    <tr>
+                        <td>${escapeHtml(r.guestName)}</td>
+                        <td>${escapeHtml(r.text)}</td>
+                    </tr>
+                `).join('')}
+            </table>
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob(['\ufeff', tableHtml], {
+        type: 'application/vnd.ms-excel;charset=utf-8;'
+    });
+
+    const fileName = `座位表_${currentSession === 'afternoon' ? '下午場' : '晚上場'}.xls`;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
+function parseSeatIdForExport(seatId) {
+    const parts = seatId.split('-');
+    let floorType = '';
+    let row = '';
+    let number = Number(parts[parts.length - 1]);
+    let sortKey = 999999;
+    let labelPrefix = '';
+    let displayKey = '';
+
+    if (parts[0] === '1F' || parts[0] === '2F' || parts[0] === '3F' || parts[0] === '4F') {
+        floorType = parts[0];
+        row = parts[1];
+    } else if (parts[0] === 'REAR') {
+        floorType = '2F-REAR';
+        row = parts[2];
+    } else if (parts[0] === 'FBOX') {
+        floorType = '2F-FBOX';
+        row = parts[2];
+    } else {
+        floorType = 'OTHER';
+        row = parts[0];
+    }
+
+    if (floorType === '3F') {
+        labelPrefix = `3F${row}排`;
+        displayKey = `3F-${row}`;
+        sortKey = 3000 + getRowOrder('3F', row);
+    } else if (floorType === '4F') {
+        labelPrefix = `4F${row}排`;
+        displayKey = `4F-${row}`;
+        sortKey = 4000 + getRowOrder('4F', row);
+    } else if (floorType === '2F-FBOX') {
+        labelPrefix = `${row}排`;
+        displayKey = `2F-FBOX-${row}`;
+        sortKey = 2100 + getFrontBoxOrder(row);
+    } else if (floorType === '2F') {
+        labelPrefix = `${row}排`;
+        displayKey = `2F-${row}`;
+        sortKey = 2200 + getRowOrder('2F', row);
+    } else if (floorType === '2F-REAR') {
+        labelPrefix = `${row}排`;
+        displayKey = `2F-REAR-${row}`;
+        sortKey = 2300 + getRearOrder(row);
+    } else if (floorType === '1F') {
+        labelPrefix = `${row}排`;
+        displayKey = `1F-${row}`;
+        sortKey = 1000 + getRowOrder('1F', row);
+    } else {
+        labelPrefix = `${row}排`;
+        displayKey = `OTHER-${row}`;
+        sortKey = 9000;
+    }
+
+    return { floorType, row, number, sortKey, labelPrefix, displayKey };
+}
+
+function compressSeatNumbers(numbers) {
+    const sorted = [...new Set(numbers)].sort((a, b) => a - b);
+    if (!sorted.length) return '';
+
+    const ranges = [];
+    let start = sorted[0];
+    let prev = sorted[0];
+
+    for (let i = 1; i < sorted.length; i++) {
+        const current = sorted[i];
+        if (current === prev + 1) {
+            prev = current;
+            continue;
+        }
+        ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+        start = prev = current;
+    }
+    ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+
+    return ranges.join(', ');
+}
+
+function getRowOrder(floor, row) {
+    if (floor === '1F') {
+        const list = floor1Rows.map(r => r.row);
+        const idx = list.indexOf(row);
+        return idx >= 0 ? idx + 1 : 999;
+    }
+    if (floor === '2F') {
+        const list = floor2MainRows.map(r => r.row);
+        const idx = list.indexOf(row);
+        return idx >= 0 ? idx + 1 : 999;
+    }
+    if (floor === '3F') {
+        const list = floor3Rows.map(r => r.row);
+        const idx = list.indexOf(row);
+        return idx >= 0 ? idx + 1 : 999;
+    }
+    if (floor === '4F') {
+        const list = floor4Rows.map(r => r.row);
+        const idx = list.indexOf(row);
+        return idx >= 0 ? idx + 1 : 999;
+    }
+    return 999;
+}
+
+function getFrontBoxOrder(row) {
+    const list = frontLeftBoxes.map(r => r.row);
+    const idx = list.indexOf(row);
+    return idx >= 0 ? idx + 1 : 999;
+}
+
+function getRearOrder(row) {
+    const list = rearLeftBoxes.map(r => r.row);
+    const idx = list.indexOf(row);
+    return idx >= 0 ? idx + 1 : 999;
+}
+
+function escapeHtml(text) {
+    return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 }
 
 async function saveDataToCloud(dataObj) {
