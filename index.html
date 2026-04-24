@@ -20,23 +20,33 @@ body{overflow:hidden}
 .tab-btn.active{ background:#2f4358; color:#fff; border-color:#2f4358; }
 
 .input-group{ display:flex; flex-direction:column; gap:8px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #eee; }
+.input-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .input-group input{ width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; }
+.input-hint{ font-size:12px; color:#666; line-height:1.5; }
+.editing-banner{ display:none; padding:10px 12px; border-radius:6px; background:#fff3cd; color:#7a5d00; border:1px solid #ffe69c; font-size:13px; font-weight:700; }
+.btn-secondary{ background:#6c757d; color:#fff; border:none; padding:12px; font-weight:700; cursor:pointer; border-radius:4px; }
 
 .section-title{ font-weight:800; color:#333; }
 
 .btn-confirm{ background:#28a745; color:white; border:none; padding:12px; font-weight:700; cursor:pointer; border-radius:4px; }
 .guest-list-container{ flex:1; display:flex; flex-direction:column; min-height:0; }
-.guest-list{ overflow-y:auto; border:1px solid #eee; border-radius:4px; flex:1; }
+.guest-list{ overflow-y:auto; border:1px solid #eee; border-radius:4px; flex:1; padding:10px; background:#fafafa; }
 
 /* 貴賓清單樣式修正 */
-.guest-item{ padding:12px; border-bottom:1px solid #eee; cursor:pointer; transition:0.2s; display:flex; justify-content:space-between; align-items:center; }
+.guest-group{ border:2px solid #d8dee4; border-radius:10px; background:#fff; margin-bottom:10px; overflow:hidden; }
+.guest-group-header{ padding:8px 12px; font-weight:800; font-size:13px; background:#f4f6f8; border-bottom:1px solid #e6ebef; color:#344054; }
+.guest-group-header.ungrouped{ background:#f8f9fa; color:#666; }
+.guest-item{ padding:12px; border-bottom:1px solid #eee; cursor:pointer; transition:0.2s; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.guest-item:last-child{ border-bottom:none; }
 .guest-item:hover{ background:#f0f7ff; }
 .guest-item.selected{ background:#e3f2fd; border-left:5px solid #2196f3; }
-.guest-item.completed{ background:#f0f0f0; color:#888; cursor:default; }
-.guest-info { flex: 1; }
+.guest-item.completed{ background:#f0f0f0; color:#888; }
+.guest-item.highlighting{ box-shadow: inset 0 0 0 2px #2196f3; }
+.guest-info { flex: 1; min-width:0; }
 .guest-name{ font-weight:700; display:block; }
+.guest-meta{ font-size:12px; color:#666; display:flex; flex-wrap:wrap; gap:8px; margin-top:2px; }
 .guest-note { font-size: 12px; color: #666; display: block; margin-top: 2px; }
-.btn-delete { color: #dc3545; font-weight: 800; padding: 5px 10px; cursor: pointer; border: 1px solid transparent; border-radius: 4px; }
+.btn-delete { color: #dc3545; font-weight: 800; padding: 5px 10px; cursor: pointer; border: 1px solid transparent; border-radius: 4px; flex-shrink:0; }
 .btn-delete:hover { background: #fff0f0; border-color: #fab1a0; }
 
 /* --- 座位圖核心佈局 --- */
@@ -66,10 +76,48 @@ body{overflow:hidden}
     width:54px; height:54px; margin:0 3px; border:1px solid #b7b7b7; background:#fff;
     display:flex; align-items:center; justify-content:center; font-size:11px; border-radius:4px;
     cursor:pointer; text-align:center; line-height:1.1; overflow:hidden; word-break:break-all;
-    position:relative; z-index:3;
+    position:relative; z-index:3; padding:4px;
 }
-.seat.occupied{ font-weight:700; color:#000; }
+.seat.occupied{ font-weight:700; color:#111; background:#eef1f4; }
 .seat.has-border{ border-width:3px !important; }
+.seat-content{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+.seat-name{ font-size:10px; font-weight:800; line-height:1.1; max-width:100%; }
+
+/* ★ 修改1: 座位號碼置中放大，顏色由 JS 控制 */
+.seat-number{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+    font-weight:800;
+    line-height:1;
+    pointer-events:none;
+}
+/* 未佔用座位的號碼 → 黑色 */
+.seat:not(.occupied) .seat-number { color: #111; }
+/* 已佔用座位的號碼 → 淺灰 */
+.seat.occupied .seat-number { color: #bbb; }
+
+.seat.is-flashing{
+    animation: seatFlash 0.72s steps(2, end) infinite;
+    outline:4px solid #ff1744;
+    outline-offset:2px;
+    z-index:8;
+}
+@keyframes seatFlash{
+    0%,100%{
+        box-shadow:0 0 0 0 rgba(255,23,68,0), 0 0 0 0 rgba(255,235,59,0);
+        transform:scale(1);
+        filter:brightness(1);
+    }
+    50%{
+        box-shadow:0 0 0 6px rgba(255,23,68,.9), 0 0 0 12px rgba(255,235,59,.95);
+        transform:scale(1.1);
+        filter:brightness(1.12);
+    }
+}
 .seat.companion{ background-color:#fff0f0; color:#d63031; border-color:#fab1a0; font-weight:800; }
 .seat.wheelchair{ background:#e8f5e9; border:2px solid #4caf50; font-weight:700; }
 .seat.blocked { background: #000 !important; border-color: #000 !important; color: #000 !important; cursor: default !important; pointer-events: none; }
@@ -132,11 +180,18 @@ body{overflow:hidden}
             <button class="tab-btn" onclick="switchSession('evening')">晚上場</button>
         </div>
         <div class="input-group">
-            <div class="section-title">新增待排貴賓</div>
+            <div class="section-title" id="form-title">新增待排貴賓</div>
+            <div id="editing-banner" class="editing-banner"></div>
             <input type="text" id="inName" placeholder="貴賓姓名">
-            <input type="number" id="inCount" placeholder="張數" min="1">
+            <div class="input-row">
+                <input type="number" id="inCount" placeholder="張數" min="1">
+                <input type="text" id="inGroup" placeholder="群組(選填)">
+            </div>
             <input type="text" id="inNote" placeholder="備註">
-            <button class="btn-confirm" onclick="addGuest()">確認新增</button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <button class="btn-confirm" id="submit-btn" onclick="submitGuestForm()">確認新增</button>
+                <button class="btn-secondary" id="cancel-edit-btn" onclick="cancelGuestEdit()" style="display:none;">取消修改</button>
+            </div>
         </div>
         <div class="guest-list-container">
             <div class="section-title">待排貴賓區</div>
@@ -236,7 +291,8 @@ const hhCompanionSeats = [17,23,29,31,33,35,37, 18,24,30,32,34,36,38];
 let currentSession = 'afternoon';
 const sessions = { afternoon: { guests: [], seatMap: {} }, evening: { guests: [], seatMap: {} } };
 let selectedGuestId = null;
-const colors = ["#FFADAD","#FFD6A5","#FDFFB6","#CAFFBF","#9BF6FF","#A0C4FF","#BDB2FF","#FFC6FF","#FF9AA2","#C7CEEA"];
+let editingGuestId = null;
+const contrastPalette = ["#D32F2F","#1976D2","#2E7D32","#6A1B9A","#EF6C00","#00838F","#AD1457","#283593","#5D4037","#455A64","#C2185B","#7B1FA2","#1565C0","#00695C","#827717"];
 let colorMap = {};
 
 // --- 邏輯功能 ---
@@ -249,69 +305,227 @@ async function loadData() {
     const { data } = await supabaseClient.from('seating_data').select('config').eq('id', 1).single();
     if (data?.config?.sessions) {
         Object.assign(sessions, data.config.sessions);
-        Object.assign(colorMap, data.config.colorMap);
-        render();
+        Object.assign(colorMap, data.config.colorMap || {});
     }
+    ['afternoon','evening'].forEach(key => {
+        const prev = currentSession;
+        currentSession = key;
+        recalculateAssignedCounts();
+        getCurrentSession().guests.forEach(g => assignGuestColor(g.id));
+        currentSession = prev;
+    });
+    render();
 }
 
 function switchSession(s) {
     currentSession = s;
     selectedGuestId = null;
+    editingGuestId = null;
+    resetGuestForm();
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('onclick').includes(s)));
     render();
 }
 
-function addGuest() {
-    const name = document.getElementById('inName').value.trim();
-    const count = parseInt(document.getElementById('inCount').value);
-    const note = document.getElementById('inNote').value.trim();
-    if (!name || isNaN(count)) return alert("請填寫姓名與張數");
+function getCurrentSession() {
+    return sessions[currentSession];
+}
 
-    const id = "g-" + Date.now();
-    sessions[currentSession].guests.push({ id, name, total: count, assigned: 0, note });
-    colorMap[id] = colors[sessions[currentSession].guests.length % colors.length];
+function getGuestById(id) {
+    return getCurrentSession().guests.find(g => g.id === id);
+}
 
+function resetGuestForm() {
+    editingGuestId = null;
     document.getElementById('inName').value = "";
     document.getElementById('inCount').value = "";
+    document.getElementById('inGroup').value = "";
     document.getElementById('inNote').value = "";
+    document.getElementById('form-title').textContent = "新增待排貴賓";
+    document.getElementById('submit-btn').textContent = "確認新增";
+    document.getElementById('cancel-edit-btn').style.display = "none";
+    const banner = document.getElementById('editing-banner');
+    banner.style.display = "none";
+    banner.textContent = "";
+}
 
+function startGuestEdit(id) {
+    const guest = getGuestById(id);
+    if (!guest) return;
+    editingGuestId = id;
+    selectedGuestId = id;
+    document.getElementById('inName').value = guest.name || "";
+    document.getElementById('inCount').value = guest.total ?? "";
+    document.getElementById('inGroup').value = guest.group || "";
+    document.getElementById('inNote').value = guest.note || "";
+    document.getElementById('form-title').textContent = `修改待排貴賓：${guest.name}`;
+    document.getElementById('submit-btn').textContent = "確認修改";
+    document.getElementById('cancel-edit-btn').style.display = "inline-block";
+    const banner = document.getElementById('editing-banner');
+    banner.style.display = "block";
+    banner.textContent = "已進入修改模式：可直接調整姓名、張數、群組與備註。";
+    document.getElementById('inCount').focus();
+    document.getElementById('inCount').select();
+    render();
+}
+
+function cancelGuestEdit() {
+    resetGuestForm();
+    render();
+}
+
+function getGuestAssignedSeatIds(guestId) {
+    return Object.entries(getCurrentSession().seatMap)
+        .filter(([seatId, gid]) => gid === guestId)
+        .map(([seatId]) => seatId);
+}
+
+function sortSeatIdsForRelease(seatIds) {
+    return [...seatIds].sort((a, b) => {
+        const pa = parseSeatIdForExport(a);
+        const pb = parseSeatIdForExport(b);
+        if (pa.sortKey !== pb.sortKey) return pb.sortKey - pa.sortKey;
+        return pb.number - pa.number;
+    });
+}
+
+function releaseExtraSeatsForGuest(guestId, keepCount) {
+    const session = getCurrentSession();
+    const currentSeatIds = sortSeatIdsForRelease(getGuestAssignedSeatIds(guestId));
+    const removeCount = Math.max(0, currentSeatIds.length - keepCount);
+    const removed = [];
+    for (let i = 0; i < removeCount; i++) {
+        const seatId = currentSeatIds[i];
+        if (session.seatMap[seatId] === guestId) {
+            delete session.seatMap[seatId];
+            removed.push(seatId);
+        }
+    }
+    return removed;
+}
+
+function recalculateAssignedCounts() {
+    const session = getCurrentSession();
+    const counts = {};
+    Object.values(session.seatMap).forEach(gid => {
+        counts[gid] = (counts[gid] || 0) + 1;
+    });
+    session.guests.forEach(g => {
+        g.assigned = counts[g.id] || 0;
+    });
+}
+
+function assignGuestColor(guestId) {
+    if (!guestId) return "#1976D2";
+    if (!colorMap[guestId]) {
+        const used = new Set(Object.values(colorMap));
+        colorMap[guestId] = contrastPalette.find(color => !used.has(color)) || contrastPalette[Object.keys(colorMap).length % contrastPalette.length];
+    }
+    return colorMap[guestId];
+}
+
+function submitGuestForm() {
+    const name = document.getElementById('inName').value.trim();
+    const count = parseInt(document.getElementById('inCount').value, 10);
+    const group = document.getElementById('inGroup').value.trim();
+    const note = document.getElementById('inNote').value.trim();
+    if (!name || !Number.isInteger(count) || count < 1) {
+        alert("請填寫姓名與正確張數");
+        return;
+    }
+
+    const session = getCurrentSession();
+
+    if (editingGuestId) {
+        const guest = getGuestById(editingGuestId);
+        if (!guest) {
+            alert("找不到要修改的貴賓資料");
+            resetGuestForm();
+            render();
+            return;
+        }
+
+        guest.name = name;
+        guest.group = group;
+        guest.note = note;
+
+        recalculateAssignedCounts();
+        const assignedNow = guest.assigned || 0;
+
+        if (count < assignedNow) {
+            const confirmed = confirm(`目前已排 ${assignedNow} 張，新的需求張數是 ${count} 張。\n系統將自動釋放多出的 ${assignedNow - count} 個座位，是否繼續？`);
+            if (!confirmed) return;
+            releaseExtraSeatsForGuest(guest.id, count);
+            recalculateAssignedCounts();
+        }
+
+        guest.total = count;
+        assignGuestColor(guest.id);
+        selectedGuestId = guest.id;
+        resetGuestForm();
+        saveData();
+        render();
+        return;
+    }
+
+    const id = "g-" + Date.now();
+    session.guests.push({ id, name, total: count, assigned: 0, group, note });
+    assignGuestColor(id);
+    selectedGuestId = id;
+    resetGuestForm();
     saveData();
     render();
 }
 
-function deleteGuest(e, id) {
+function promptGuestAction(e, id) {
     e.stopPropagation();
+    const guest = getGuestById(id);
+    if (!guest) return;
+    const action = prompt(`請輸入操作：\nM = 修改\nD = 刪除\n\n目前貴賓：${guest.name}`, "M");
+    if (action === null) return;
+    const normalized = action.trim().toUpperCase();
+    if (normalized === "M" || normalized === "修改") {
+        startGuestEdit(id);
+        return;
+    }
+    if (normalized === "D" || normalized === "刪除") {
+        deleteGuest(e, id);
+        return;
+    }
+    alert("未執行任何操作。請輸入 M 或 D。");
+}
+
+function deleteGuest(e, id) {
+    if (e) e.stopPropagation();
     if (!confirm("確定要刪除這位貴賓及其所有劃位嗎？")) return;
 
-    const session = sessions[currentSession];
+    const session = getCurrentSession();
     session.guests = session.guests.filter(g => g.id !== id);
 
-    for (let seatId in session.seatMap) {
+    for (const seatId in session.seatMap) {
         if (session.seatMap[seatId] === id) delete session.seatMap[seatId];
     }
 
     if (selectedGuestId === id) selectedGuestId = null;
+    if (editingGuestId === id) resetGuestForm();
+    recalculateAssignedCounts();
     saveData();
     render();
 }
 
 function handleSeatClick(seatId) {
-    const session = sessions[currentSession];
+    const session = getCurrentSession();
     const existingGuestId = session.seatMap[seatId];
 
     if (existingGuestId) {
-        const g = session.guests.find(g => g.id === existingGuestId);
-        if (g) g.assigned--;
         delete session.seatMap[seatId];
     } else if (selectedGuestId) {
-        const g = session.guests.find(g => g.id === selectedGuestId);
-        if (g && g.assigned < g.total) {
+        const g = getGuestById(selectedGuestId);
+        if (g && (g.assigned || 0) < g.total) {
             session.seatMap[seatId] = selectedGuestId;
-            g.assigned++;
-            if (g.assigned === g.total) selectedGuestId = null;
         }
     }
 
+    recalculateAssignedCounts();
     saveData();
     render();
 }
@@ -327,57 +541,115 @@ function render() {
     syncLayout();
 }
 
+// ★ 修改2: 貴賓清單顯示姓名後加括弧總票數
 function renderGuestList() {
     const listEl = document.getElementById('guest-list');
     listEl.innerHTML = "";
 
-    const guests = sessions[currentSession].guests;
-    const pendingGuests = guests.filter(g => g.assigned < g.total);
-    const completedGuests = guests.filter(g => g.assigned >= g.total);
-    const orderedGuests = [...pendingGuests, ...completedGuests];
+    const guests = [...getCurrentSession().guests];
+    const groups = new Map();
 
-    orderedGuests.forEach(g => {
-        const item = document.createElement('div');
-        const isFull = g.assigned >= g.total;
-        item.className = `guest-item ${isFull ? 'completed' : ''} ${selectedGuestId === g.id ? 'selected' : ''}`;
+    guests.forEach(g => {
+        const key = (g.group || '').trim() || '__ungrouped__';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(g);
+    });
 
-        item.innerHTML = `
-            <div class="guest-info">
-                <span class="guest-name">${g.name} (${g.assigned}/${g.total})</span>
-                ${g.note ? `<span class="guest-note">備註: ${g.note}</span>` : ''}
-            </div>
-            <div class="btn-delete" onclick="deleteGuest(event, '${g.id}')">✕</div>
-        `;
+    const orderedGroupKeys = [...groups.keys()].sort((a, b) => {
+        if (a === '__ungrouped__') return 1;
+        if (b === '__ungrouped__') return -1;
+        return a.localeCompare(b, 'zh-Hant');
+    });
 
-        if (!isFull) {
+    orderedGroupKeys.forEach(groupKey => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'guest-group';
+
+        const header = document.createElement('div');
+        header.className = `guest-group-header ${groupKey === '__ungrouped__' ? 'ungrouped' : ''}`;
+        header.textContent = groupKey === '__ungrouped__' ? '未分組' : `群組：${groupKey}`;
+        wrapper.appendChild(header);
+
+        const guestsInGroup = groups.get(groupKey).sort((a, b) => {
+            const aPending = a.assigned < a.total ? 0 : 1;
+            const bPending = b.assigned < b.total ? 0 : 1;
+            if (aPending !== bPending) return aPending - bPending;
+            return a.name.localeCompare(b.name, 'zh-Hant');
+        });
+
+        guestsInGroup.forEach(g => {
+            const item = document.createElement('div');
+            const isFull = g.assigned >= g.total;
+            const isSelected = selectedGuestId === g.id;
+            item.className = `guest-item ${isFull ? 'completed' : ''} ${isSelected ? 'selected highlighting' : ''}`;
+
+            // ★ 姓名後加括弧總票數，如「王小明(5)」
+            item.innerHTML = `
+                <div class="guest-info">
+                    <span class="guest-name">${g.name}(${g.total}) &nbsp; ${g.assigned}/${g.total}</span>
+                    <div class="guest-meta">
+                        ${g.group ? `<span>群組：${g.group}</span>` : ''}
+                        ${g.note ? `<span>備註：${g.note}</span>` : ''}
+                        ${isFull ? `<span>已排滿</span>` : `<span>待排 ${Math.max(0, g.total - g.assigned)} 張</span>`}
+                    </div>
+                </div>
+                <div class="btn-delete" onclick="promptGuestAction(event, '${g.id}')">⋯</div>
+            `;
+
             item.onclick = () => {
-                selectedGuestId = g.id;
+                selectedGuestId = (selectedGuestId === g.id) ? null : g.id;
+                if (editingGuestId && editingGuestId !== g.id) resetGuestForm();
                 render();
             };
-        }
-        listEl.appendChild(item);
+
+            wrapper.appendChild(item);
+        });
+
+        listEl.appendChild(wrapper);
     });
 }
 
 function createSeat(row, num, typeClass = "", span = 1, borderColor = "#b7b7b7", isBlocked = false, areaKey = null) {
     const seatId = `${areaKey || row}-${num}`;
-    const guestId = sessions[currentSession].seatMap[seatId];
-    const guest = guestId ? sessions[currentSession].guests.find(g => g.id === guestId) : null;
+    const guestId = getCurrentSession().seatMap[seatId];
+    const guest = guestId ? getGuestById(guestId) : null;
     const seat = document.createElement("div");
 
     seat.className = `seat ${typeClass} ${guest ? 'occupied has-border' : ''} ${isBlocked ? 'blocked' : ''}`.trim();
-    seat.style.borderColor = guest ? colorMap[guestId] : borderColor;
+    seat.style.borderColor = guest ? (colorMap[guestId] || borderColor) : borderColor;
     seat.dataset.seatId = seatId;
     seat.dataset.areaKey = areaKey || row;
     seat.dataset.rowLabel = row;
     seat.dataset.seatNumber = num;
 
-    if (guest) {
-        seat.dataset.guestId = guestId;
-        seat.dataset.guestName = `${guest.name}(${guest.total})`;
-    } else if (!isBlocked) {
-        seat.textContent = (row === "HH" && hhCompanionSeats.includes(num)) ? "陪" : num;
+    const content = document.createElement('div');
+    content.className = 'seat-content';
+
+    const nameSpan = document.createElement('div');
+    nameSpan.className = 'seat-name';
+    content.appendChild(nameSpan);
+
+    // ★ 修改3: 座位號碼一律顯示，置中放大
+    // 已佔用座位：號碼顯示（淺灰，CSS控制），同時預留貴賓名字空間
+    // 未佔用座位：號碼顯示（黑色，CSS控制）
+    if (!isBlocked) {
+        const numberSpan = document.createElement('div');
+        numberSpan.className = 'seat-number';
+
+        if (guest) {
+            // 已佔用：顯示號碼（淺灰色，由CSS .seat.occupied .seat-number控制）
+            numberSpan.textContent = num;
+            seat.dataset.guestId = guestId;
+            seat.dataset.guestName = `${guest.name}`;
+        } else {
+            // 未佔用：顯示號碼（黑色，由CSS .seat:not(.occupied) .seat-number控制）
+            // HH排陪坐位特殊顯示
+            numberSpan.textContent = (row === "HH" && hhCompanionSeats.includes(num)) ? "陪" : num;
+        }
+        content.appendChild(numberSpan);
     }
+
+    seat.appendChild(content);
 
     if (span === 2) seat.style.width = "110px";
     if (!isBlocked) seat.onclick = () => handleSeatClick(seatId);
@@ -692,10 +964,14 @@ function syncLayout() {
     syncFrontBoxPositions();
     syncFrontColumnWidths();
     syncOutlineCanvasSize();
+    applyAutoGuestColors();
+    applyGuestHighlights();
     drawGuestOutlines();
 }
 
 function postProcessNames() {
+    document.querySelectorAll('.seat .seat-name').forEach(el => el.textContent = '');
+
     document.querySelectorAll('.seat-row').forEach(rowEl => {
         const seats = Array.from(rowEl.querySelectorAll('.seat[data-guest-id]'));
         const groups = {};
@@ -707,11 +983,74 @@ function postProcessNames() {
 
         for (let gid in groups) {
             const gSeats = groups[gid];
-            gSeats.forEach(s => s.textContent = "");
             const mid = Math.floor(gSeats.length / 2);
-            gSeats[mid].textContent = gSeats[mid].dataset.guestName;
+            const nameTarget = gSeats[mid].querySelector('.seat-name');
+            if (nameTarget) {
+                const gid = gSeats[mid].dataset.guestId;
+                const g = getGuestById(gid);
+                const baseName = gSeats[mid].dataset.guestName || '';
+                nameTarget.textContent = g ? `${baseName}(${g.total})` : baseName;
+            }
         }
     });
+}
+
+function buildSeatAdjacency() {
+    const seatEls = Array.from(document.querySelectorAll('.seat[data-guest-id]'));
+    const rects = seatEls.map(el => ({ el, rect: el.getBoundingClientRect() }));
+    const graph = {};
+
+    rects.forEach(({ el }) => {
+        const gid = el.dataset.guestId;
+        if (!graph[gid]) graph[gid] = new Set();
+    });
+
+    for (let i = 0; i < rects.length; i++) {
+        for (let j = i + 1; j < rects.length; j++) {
+            const a = rects[i], b = rects[j];
+            const gidA = a.el.dataset.guestId;
+            const gidB = b.el.dataset.guestId;
+            if (!gidA || !gidB || gidA === gidB) continue;
+
+            const horizontalGap = Math.max(0, Math.max(a.rect.left, b.rect.left) - Math.min(a.rect.right, b.rect.right));
+            const verticalGap = Math.max(0, Math.max(a.rect.top, b.rect.top) - Math.min(a.rect.bottom, b.rect.bottom));
+            const isAdjacent = (horizontalGap <= 8 && verticalGap <= 8) || (horizontalGap <= 64 && verticalGap <= 8) || (verticalGap <= 18 && horizontalGap <= 8);
+            if (isAdjacent) {
+                graph[gidA].add(gidB);
+                graph[gidB].add(gidA);
+            }
+        }
+    }
+    return graph;
+}
+
+function applyAutoGuestColors() {
+    const graph = buildSeatAdjacency();
+    const guestIds = Object.keys(graph).sort((a, b) => graph[b].size - graph[a].size);
+    const assigned = {};
+
+    guestIds.forEach((gid, idx) => {
+        const used = new Set([...graph[gid]].map(nid => assigned[nid]).filter(Boolean));
+        const pick = contrastPalette.find(color => !used.has(color)) || contrastPalette[idx % contrastPalette.length];
+        assigned[gid] = pick;
+    });
+
+    Object.entries(assigned).forEach(([gid, color]) => {
+        colorMap[gid] = color;
+    });
+
+    document.querySelectorAll('.seat[data-guest-id]').forEach(seat => {
+        const gid = seat.dataset.guestId;
+        const color = colorMap[gid] || "#1976D2";
+        seat.style.borderColor = color;
+        seat.style.background = "#eef1f4";
+    });
+}
+
+function applyGuestHighlights() {
+    document.querySelectorAll('.seat.is-flashing').forEach(el => el.classList.remove('is-flashing'));
+    if (!selectedGuestId) return;
+    document.querySelectorAll(`.seat[data-guest-id="${selectedGuestId}"]`).forEach(el => el.classList.add('is-flashing'));
 }
 
 function syncSubtitleBoxes() {
@@ -923,51 +1262,33 @@ function buildOutlinePathFromSeatRects(rects, padX = 0, padY = 0) {
     }).join(" ");
 }
 
-function round2(n) {
-    return Math.round(n * 100) / 100;
-}
-
-function pointKey(p) {
-    return `${round2(p[0])},${round2(p[1])}`;
-}
-
-function segmentKey(a, b) {
-    return `${pointKey(a)}>${pointKey(b)}`;
-}
+function round2(n) { return Math.round(n * 100) / 100; }
+function pointKey(p) { return `${round2(p[0])},${round2(p[1])}`; }
+function segmentKey(a, b) { return `${pointKey(a)}>${pointKey(b)}`; }
 
 function chooseNextPoint(prev, current, candidates) {
     if (candidates.length === 1) return candidates[0];
-
     const dirPrev = [current[0] - prev[0], current[1] - prev[1]];
     const scored = candidates.map(p => {
         const dir = [p[0] - current[0], p[1] - current[1]];
         const straight = (dir[0] === dirPrev[0] && dir[1] === dirPrev[1]) ? 0 : 1;
         return { p, straight };
     }).sort((a,b)=>a.straight-b.straight);
-
     return scored[0].p;
 }
 
 function simplifyCollinear(points) {
     if (points.length <= 3) return points;
     const result = [points[0]];
-
     for (let i = 1; i < points.length - 1; i++) {
         const a = result[result.length - 1];
         const b = points[i];
         const c = points[i + 1];
-
-        const abx = b[0] - a[0];
-        const aby = b[1] - a[1];
-        const bcx = c[0] - b[0];
-        const bcy = c[1] - b[1];
-
-        if (abx * bcy === aby * bcx) {
-            continue;
-        }
+        const abx = b[0] - a[0], aby = b[1] - a[1];
+        const bcx = c[0] - b[0], bcy = c[1] - b[1];
+        if (abx * bcy === aby * bcx) continue;
         result.push(b);
     }
-
     result.push(points[points.length - 1]);
     return result;
 }
@@ -976,7 +1297,6 @@ function getVisualBounds() {
     const canvas = document.getElementById('main-canvas');
     const canvasRect = canvas.getBoundingClientRect();
     let minX = 0, maxX = canvasRect.width, maxY = canvasRect.height;
-
     canvas.querySelectorAll('*').forEach(el => {
         const r = el.getBoundingClientRect();
         if (r.width === 0 && r.height === 0) return;
@@ -987,7 +1307,6 @@ function getVisualBounds() {
         if (right > maxX) maxX = right;
         if (bot > maxY) maxY = bot;
     });
-
     return { minX, maxX, maxY, totalW: maxX - minX, totalH: maxY };
 }
 
@@ -995,15 +1314,12 @@ function doPrint(mode) {
     document.body.className = 'mode-overview';
     const canvas = document.getElementById('main-canvas');
     const { minX, totalW, totalH } = getVisualBounds();
-    const A3W_PX = 1587;
-    const A3H_PX = 1122;
-    const PADDING = 16;
+    const A3W_PX = 1587, A3H_PX = 1122, PADDING = 16;
     const scaleW = (A3W_PX - PADDING * 2) / totalW;
     const scaleH = (A3H_PX - PADDING * 2) / totalH;
     const scale = Math.min(scaleW, scaleH);
     canvas.style.transform = `translate(${-minX * scale + PADDING}px, ${PADDING}px) scale(${scale})`;
     window.print();
-
     setTimeout(() => {
         canvas.style.transform = '';
         document.body.className = 'mode-overview';
@@ -1012,12 +1328,10 @@ function doPrint(mode) {
 
 function clearData() {
     if (!confirm("確定要清空待排貴賓區？（所有已排座位將一併釋放）")) return;
-
     const session = sessions[currentSession];
     session.seatMap = {};
     session.guests = [];
     selectedGuestId = null;
-
     saveData();
     render();
 }
@@ -1037,68 +1351,41 @@ function exportSeatTable() {
     const rows = Object.keys(byGuest).map(guestId => {
         const guest = guestLookup[guestId];
         const seatEntries = byGuest[guestId];
-
         const grouped = {};
         seatEntries.forEach(item => {
             const key = item.displayKey;
             if (!grouped[key]) {
-                grouped[key] = {
-                    sortKey: item.sortKey,
-                    labelPrefix: item.labelPrefix,
-                    numbers: []
-                };
+                grouped[key] = { sortKey: item.sortKey, labelPrefix: item.labelPrefix, numbers: [] };
             }
             grouped[key].numbers.push(item.number);
         });
-
         const parts = Object.values(grouped)
             .sort((a, b) => a.sortKey - b.sortKey || a.labelPrefix.localeCompare(b.labelPrefix, 'zh-Hant'))
             .map(group => `${group.labelPrefix}${compressSeatNumbers(group.numbers)}`);
-
-        return {
-            guestName: guest ? guest.name : guestId,
-            text: `${parts.join(', ')}`
-        };
+        return { guestName: guest ? guest.name : guestId, text: `${parts.join(', ')}` };
     }).sort((a, b) => a.guestName.localeCompare(b.guestName, 'zh-Hant'));
 
     let tableHtml = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office"
               xmlns:x="urn:schemas-microsoft-com:office:excel"
               xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                table { border-collapse: collapse; width: 100%; }
-                th, td { border: 1px solid #666; padding: 8px; font-size: 12pt; vertical-align: top; }
-                th { background: #d9e2f3; font-weight: bold; }
-                .title { font-size: 14pt; font-weight: bold; }
-            </style>
-        </head>
+        <head><meta charset="UTF-8">
+        <style>
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #666; padding: 8px; font-size: 12pt; vertical-align: top; }
+            th { background: #d9e2f3; font-weight: bold; }
+            .title { font-size: 14pt; font-weight: bold; }
+        </style></head>
         <body>
-            <table>
-                <tr><th class="title">場次</th><td>${currentSession === 'afternoon' ? '下午場' : '晚上場'}</td></tr>
-            </table>
+            <table><tr><th class="title">場次</th><td>${currentSession === 'afternoon' ? '下午場' : '晚上場'}</td></tr></table>
             <br>
             <table>
-                <tr>
-                    <th style="width:180px;">貴賓姓名</th>
-                    <th>座位表</th>
-                </tr>
-                ${rows.map(r => `
-                    <tr>
-                        <td>${escapeHtml(r.guestName)}</td>
-                        <td>${escapeHtml(r.text)}</td>
-                    </tr>
-                `).join('')}
+                <tr><th style="width:180px;">貴賓姓名</th><th>座位表</th></tr>
+                ${rows.map(r => `<tr><td>${escapeHtml(r.guestName)}</td><td>${escapeHtml(r.text)}</td></tr>`).join('')}
             </table>
-        </body>
-        </html>
-    `;
+        </body></html>`;
 
-    const blob = new Blob(['\ufeff', tableHtml], {
-        type: 'application/vnd.ms-excel;charset=utf-8;'
-    });
-
+    const blob = new Blob(['\ufeff', tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const fileName = `座位表_${currentSession === 'afternoon' ? '下午場' : '晚上場'}.xls`;
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -1111,56 +1398,26 @@ function exportSeatTable() {
 
 function parseSeatIdForExport(seatId) {
     const parts = seatId.split('-');
-    let floorType = '';
-    let row = '';
-    let number = Number(parts[parts.length - 1]);
-    let sortKey = 999999;
-    let labelPrefix = '';
-    let displayKey = '';
+    let floorType = '', row = '', number = Number(parts[parts.length - 1]);
+    let sortKey = 999999, labelPrefix = '', displayKey = '';
 
     if (parts[0] === '1F' || parts[0] === '2F' || parts[0] === '3F' || parts[0] === '4F') {
-        floorType = parts[0];
-        row = parts[1];
+        floorType = parts[0]; row = parts[1];
     } else if (parts[0] === 'REAR') {
-        floorType = '2F-REAR';
-        row = parts[2];
+        floorType = '2F-REAR'; row = parts[2];
     } else if (parts[0] === 'FBOX') {
-        floorType = '2F-FBOX';
-        row = parts[2];
+        floorType = '2F-FBOX'; row = parts[2];
     } else {
-        floorType = 'OTHER';
-        row = parts[0];
+        floorType = 'OTHER'; row = parts[0];
     }
 
-    if (floorType === '3F') {
-        labelPrefix = `3F${row}排`;
-        displayKey = `3F-${row}`;
-        sortKey = 3000 + getRowOrder('3F', row);
-    } else if (floorType === '4F') {
-        labelPrefix = `4F${row}排`;
-        displayKey = `4F-${row}`;
-        sortKey = 4000 + getRowOrder('4F', row);
-    } else if (floorType === '2F-FBOX') {
-        labelPrefix = `${row}排`;
-        displayKey = `2F-FBOX-${row}`;
-        sortKey = 2100 + getFrontBoxOrder(row);
-    } else if (floorType === '2F') {
-        labelPrefix = `${row}排`;
-        displayKey = `2F-${row}`;
-        sortKey = 2200 + getRowOrder('2F', row);
-    } else if (floorType === '2F-REAR') {
-        labelPrefix = `${row}排`;
-        displayKey = `2F-REAR-${row}`;
-        sortKey = 2300 + getRearOrder(row);
-    } else if (floorType === '1F') {
-        labelPrefix = `${row}排`;
-        displayKey = `1F-${row}`;
-        sortKey = 1000 + getRowOrder('1F', row);
-    } else {
-        labelPrefix = `${row}排`;
-        displayKey = `OTHER-${row}`;
-        sortKey = 9000;
-    }
+    if (floorType === '3F') { labelPrefix = `3F${row}排`; displayKey = `3F-${row}`; sortKey = 3000 + getRowOrder('3F', row); }
+    else if (floorType === '4F') { labelPrefix = `4F${row}排`; displayKey = `4F-${row}`; sortKey = 4000 + getRowOrder('4F', row); }
+    else if (floorType === '2F-FBOX') { labelPrefix = `${row}排`; displayKey = `2F-FBOX-${row}`; sortKey = 2100 + getFrontBoxOrder(row); }
+    else if (floorType === '2F') { labelPrefix = `${row}排`; displayKey = `2F-${row}`; sortKey = 2200 + getRowOrder('2F', row); }
+    else if (floorType === '2F-REAR') { labelPrefix = `${row}排`; displayKey = `2F-REAR-${row}`; sortKey = 2300 + getRearOrder(row); }
+    else if (floorType === '1F') { labelPrefix = `${row}排`; displayKey = `1F-${row}`; sortKey = 1000 + getRowOrder('1F', row); }
+    else { labelPrefix = `${row}排`; displayKey = `OTHER-${row}`; sortKey = 9000; }
 
     return { floorType, row, number, sortKey, labelPrefix, displayKey };
 }
@@ -1168,75 +1425,33 @@ function parseSeatIdForExport(seatId) {
 function compressSeatNumbers(numbers) {
     const sorted = [...new Set(numbers)].sort((a, b) => a - b);
     if (!sorted.length) return '';
-
     const ranges = [];
-    let start = sorted[0];
-    let prev = sorted[0];
-
+    let start = sorted[0], prev = sorted[0];
     for (let i = 1; i < sorted.length; i++) {
         const current = sorted[i];
-        if (current === prev + 1) {
-            prev = current;
-            continue;
-        }
+        if (current === prev + 1) { prev = current; continue; }
         ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
         start = prev = current;
     }
     ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
-
     return ranges.join(', ');
 }
 
 function getRowOrder(floor, row) {
-    if (floor === '1F') {
-        const list = floor1Rows.map(r => r.row);
-        const idx = list.indexOf(row);
-        return idx >= 0 ? idx + 1 : 999;
-    }
-    if (floor === '2F') {
-        const list = floor2MainRows.map(r => r.row);
-        const idx = list.indexOf(row);
-        return idx >= 0 ? idx + 1 : 999;
-    }
-    if (floor === '3F') {
-        const list = floor3Rows.map(r => r.row);
-        const idx = list.indexOf(row);
-        return idx >= 0 ? idx + 1 : 999;
-    }
-    if (floor === '4F') {
-        const list = floor4Rows.map(r => r.row);
-        const idx = list.indexOf(row);
-        return idx >= 0 ? idx + 1 : 999;
-    }
+    if (floor === '1F') { const list = floor1Rows.map(r => r.row); const idx = list.indexOf(row); return idx >= 0 ? idx + 1 : 999; }
+    if (floor === '2F') { const list = floor2MainRows.map(r => r.row); const idx = list.indexOf(row); return idx >= 0 ? idx + 1 : 999; }
+    if (floor === '3F') { const list = floor3Rows.map(r => r.row); const idx = list.indexOf(row); return idx >= 0 ? idx + 1 : 999; }
+    if (floor === '4F') { const list = floor4Rows.map(r => r.row); const idx = list.indexOf(row); return idx >= 0 ? idx + 1 : 999; }
     return 999;
 }
 
-function getFrontBoxOrder(row) {
-    const list = frontLeftBoxes.map(r => r.row);
-    const idx = list.indexOf(row);
-    return idx >= 0 ? idx + 1 : 999;
-}
-
-function getRearOrder(row) {
-    const list = rearLeftBoxes.map(r => r.row);
-    const idx = list.indexOf(row);
-    return idx >= 0 ? idx + 1 : 999;
-}
-
+function getFrontBoxOrder(row) { const list = frontLeftBoxes.map(r => r.row); const idx = list.indexOf(row); return idx >= 0 ? idx + 1 : 999; }
+function getRearOrder(row) { const list = rearLeftBoxes.map(r => r.row); const idx = list.indexOf(row); return idx >= 0 ? idx + 1 : 999; }
 function escapeHtml(text) {
-    return String(text)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
+    return String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 }
 
-async function saveDataToCloud(dataObj) {
-    await supabaseClient.from('seating_data').update({ config: dataObj }).eq('id', 1);
-}
-
-window.onload = () => { loadData(); };
+window.onload = () => { resetGuestForm(); loadData(); };
 window.onresize = () => requestAnimationFrame(syncLayout);
 </script>
 </body>
